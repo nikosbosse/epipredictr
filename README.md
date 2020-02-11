@@ -1,2 +1,0 @@
-# epipredictr
-Epidemiology Forecasting Models
