@@ -2,10 +2,10 @@ Package: epipredictr
 Title: What the Package Does (One Line, Title Case)
 Version: 0.0.0.9000
 Authors@R: 
-    person(given = "First",
-           family = "Last",
+    person(given = "Nikos",
+           family = "Bosse",
            role = c("aut", "cre"),
-           email = "first.last@example.com",
+           email = "nikosbosse@gmail.com",
            comment = c(ORCID = "YOUR-ORCID-ID"))
 Description: What the package does (one paragraph).
 License: What license it uses
@@ -26,3 +26,4 @@ LinkingTo:
     rstan (>= 2.18.1),
     StanHeaders (>= 2.18.0)
 SystemRequirements: GNU make
+RoxygenNote: 6.1.1

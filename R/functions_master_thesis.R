@@ -1,3 +1,15 @@
+#' setup work environment
+#' 
+#' not needed later on. 
+#' 
+#' @return nothing
+#' @examples
+#' \notrun{
+#' inc <- my_load_data()
+#' }
+#' 
+#' 
+
 my_setup <- function(){
 	options(max.print = 2000)
 	par(family = "Serif")
@@ -21,6 +33,16 @@ my_setup <- function(){
 
 # ================================================= # 
 # ================================================= # 
+
+
+#' Load data
+#' 
+#' @return the data
+#' @examples
+#' \notrun{
+#' inc <- my_load_data()
+#' }
+
 
 my_load_data <- function(){
 	ebola <- read.csv("../data/Data_ DRC Ebola Outbreak, North Kivu and Ituri - MOH-By-Health-Zone.csv", header = T, stringsAsFactors = F)
@@ -105,16 +127,14 @@ my_stan_bsts <- function(past_r, n_pred = 10){
 }
 
 
-# ================================================= # 
-# ================================================= # 
-## empirical cumulative distribution function
 my_F <- function(predictions, k){
 	return(sum(predictions <= k) / length(predictions))
 }
 
+
 ## ECDF for integers
 my_F_int <- function(predictions, k){
-	return(sum(predictions == k) / length(predictions))
+	return(sum(predictions <= k) / length(predictions))
 }
 
 
@@ -136,8 +156,8 @@ my_PIT <- function(true_values, samples){
 		r <- runif(1, min = 0, max = 1) 
 		F_k <- my_F(samples[,i], true_values[i])
 		F_k_1 <- my_F(samples[,i], true_values[i] - 1)
-		u[i] <- F_k #for continuous variables
-		#u[i] <- F_k + r * (F_k - F_k_1)
+		# u[i] <- F_k #for continuous variables
+		u[i] <- F_k + r * (F_k - F_k_1)
 	}
 	return(u[!is.na(u)])
 }

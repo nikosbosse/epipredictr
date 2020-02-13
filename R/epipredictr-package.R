@@ -14,3 +14,8 @@
 #' Stan Development Team (2020). RStan: the R interface to Stan. R package version 2.19.3. https://mc-stan.org
 #'
 NULL
+
+
+
+# this holds the documentation for the entire pacakge. see http://r-pkgs.had.co.nz/man.html
+
