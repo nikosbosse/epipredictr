@@ -132,74 +132,12 @@ my_F <- function(predictions, k){
 }
 
 
-## ECDF for integers
-my_F_int <- function(predictions, k){
-	return(sum(predictions <= k) / length(predictions))
-}
-
-
-# ================================================= # 
-# ================================================= # 
-
-## PIT transformation
-my_PIT <- function(true_values, samples){
-	# true_values is a vector of length n
-	# samples is a matrix with n columns where
-	# every column [,i] has all the draws that correspond 
-	# to one true_value[i]
-
-	n <- length(true_values)
-	u <- numeric(n)
-	#u[1] <- NA
-
-	for (i in 1:n){
-		r <- runif(1, min = 0, max = 1) 
-		F_k <- my_F(samples[,i], true_values[i])
-		F_k_1 <- my_F(samples[,i], true_values[i] - 1)
-		# u[i] <- F_k #for continuous variables
-		u[i] <- F_k + r * (F_k - F_k_1)
-	}
-	return(u[!is.na(u)])
-}
-
 
 # ================================================= # 
 # ================================================= # 
 
 my_centrality <- function(u){
 	sum(u > 0.25 & u < 0.75)/length(u) - 0.5
-}
-
-
-# ================================================= # 
-# ================================================= # 
-
-my_sharpness <- function(forecasts){
-	#forecasts is a matrix with n columns where
-	# every column [,i] has all the draws that correspond 
-	# to one true_value[i]
-
-	S <- function(predictions){
-		1/0.675 * median(abs(predictions - median(predictions)))
-	}
-	res <- apply(forecasts, MARGIN = 2, FUN = S)
-	return(res)
-}
-
-
-# ================================================= # 
-# ================================================= # 
-
-my_bias <- function(true_values, samples){
-	res <- numeric(length(true_values))
-	#res[1] <- NA
-	for (j in 1:length(res)){
-		F_k <- my_F(samples[,j], true_values[j])
-		F_k_1 <- my_F(samples[,j], (true_values[j] - 1))
-		res[j] <- 1 - (F_k + F_k_1) 
-		#res[j] <- 1 - (F_k - F_k_1) 
-	}
-	return(res[!is.na(res)])
 }
 
 

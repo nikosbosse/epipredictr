@@ -18,4 +18,3 @@ NULL
 
 
 # this holds the documentation for the entire pacakge. see http://r-pkgs.had.co.nz/man.html
-
