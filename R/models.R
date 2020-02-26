@@ -7,8 +7,11 @@
 #' @return An object of class `stanfit` returned by `rstan::sampling`
 #'
 
-lm_stan <- function(x, y, ...) {
-  standata <- list(x = x, y = y, N = length(y))
-  out <- rstan::sampling(stanmodels$lm, data = standata, ...)
+linear_regression <- function(x, y, num_pred = 10, ...) {
+  standata <- list(x = x, 
+  	               y = y, 
+  	               N = length(y), 
+  	               num_pred = num_pred)
+  out <- rstan::sampling(stanmodels$linear_regression, data = standata, ...)
   return(out)
 }

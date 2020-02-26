@@ -34,38 +34,6 @@ my_setup <- function(){
 # ================================================= # 
 # ================================================= # 
 
-
-#' Load data
-#' 
-#' @return the data
-#' @examples
-#' \notrun{
-#' inc <- my_load_data()
-#' }
-
-
-my_load_data <- function(){
-	ebola <- read.csv("../data/Data_ DRC Ebola Outbreak, North Kivu and Ituri - MOH-By-Health-Zone.csv", header = T, stringsAsFactors = F)
-
-	# remove row with explanations
-	ebola <- ebola[-1,]
-
-	## only look at one province
-	nkivu <- ebola[ebola$province == "North Kivu",]
-	nkivu$total_cases_change <- as.integer(nkivu$total_cases_change)
-
-	## sum up all cases for that province
-	nkivu_inc <- aggregate(total_cases_change ~ report_date, data=nkivu, FUN="sum")
-
-	nkivu_inc$report_date <- as.Date(nkivu_inc$report_date)
-	colnames(nkivu_inc) <- c("date", "inc")
-
-	nkivu_inc$inc[nkivu_inc$inc < 0] = 0
-	nkivu_inc <- nkivu_inc[-1,] #remove first entry that is zero
-	return(nkivu_inc)
-}
-
-
 # ================================================= # 
 # ================================================= # 
 

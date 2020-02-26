@@ -7,17 +7,15 @@
 #' @return
 #' a data.frame with the data
 #'
-#' @importFrom stats runif sd
-#' @importFrom ggplot2 ggplot aes geom_histogram
-#' @importFrom goftest ad.test
+#' @importFrom nCov2019 load_nCov2019
 #'
 #' @examples
 #' NULL
-#' @export
+#' @export 
 #' @references
 
 get_data <- function() {
-  x <- load_nCov2019(lang = 'en')
+  x <- nCov2019::load_nCov2019(lang = 'en')
   tmp <- subset(x['Hubei'], city == "Wuhan")
   tmp$time <- as.Date(tmp$time)
   y <- tmp[order(tmp$time), ]

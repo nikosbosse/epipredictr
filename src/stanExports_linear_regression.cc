@@ -2,12 +2,12 @@
 
 #include <Rcpp.h>
 using namespace Rcpp ;
-#include "stanExports_lm.h"
+#include "stanExports_linear_regression.h"
 
-RCPP_MODULE(stan_fit4lm_mod) {
+RCPP_MODULE(stan_fit4linear_regression_mod) {
 
 
-    class_<rstan::stan_fit<stan_model, boost::random::ecuyer1988> >("model_lm")
+    class_<rstan::stan_fit<stan_model, boost::random::ecuyer1988> >("model_linear_regression")
 
     .constructor<SEXP,SEXP,SEXP>()
 
