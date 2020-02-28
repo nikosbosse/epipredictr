@@ -17,11 +17,14 @@ model {
 
 generated quantities {
   vector[num_pred] y_pred;
-  vector[num_pred] x_pred;
+  vector[N] y_fit;
+
+  for (i in 1:N) {
+    y_fit[i] = normal_rng(intercept + beta * i, sigma);
+  }   
   
   for (i in 1:num_pred) {
-    x_pred[i] = N + i;
-    y_pred[i] = normal_rng(intercept + beta * x_pred[i], sigma);
+    y_pred[i] = normal_rng(intercept + beta * (N + i), sigma);
   } 
   
 }

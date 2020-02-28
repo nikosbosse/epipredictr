@@ -4,12 +4,14 @@
 \alias{linear_regression}
 \title{Bayesian linear regression with Stan}
 \usage{
-linear_regression(x, y, num_pred = 10, ...)
+linear_regression(y, x = NULL, num_pred = 10, ...)
 }
 \arguments{
+\item{y}{Numberic vector of output values.}
+
 \item{x}{Numeric vector of input values.}
 
-\item{y}{Numberic vector of output values.}
+\item{num_pred}{number of time points to forecast}
 
 \item{...}{Arguments passed to `rstan::sampling` (e.g. iter, chains).}
 }
