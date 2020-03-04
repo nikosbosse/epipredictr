@@ -1,26 +1,93 @@
 library(epipredictr)
+library(rstan)
 options(mc.cores = 4)
 rstan_options(auto_write = TRUE)
+library(scoringutils)
+options(width=as.integer(160))
+library(dplyr)
+
 
 inc <- epipredictr::get_data()
 ts <- inc$daily
-
-fit <- epipredictr::linear_regression(x = 1:length(ts), 
-									  num_pred = 10, 
-									  y = ts) 
-
+fit <- epipredictr::linear_regression(y = ts) 
 p <- extract_samples(fit, predictive = F)
-library(scoringutils)
-
 scoringutils::eval_forecasts(true_values = ts, predictions = p)
-
-res <- scoringutils::PIT(true_values = ts, predictions = round(p))
-res <- two(true_values = ts, predictions = p)
-plot(res$PIT_hist)
-
-
 a <- fit_iteratively(ts)
 
+
+
+
+
+# ======================================================== #
+# try estimates for R0 values
+# ======================================================== #
+d <- readRDS("data/time_varying_params.rds")[[1]]
+
+beta_mu <- d$mean / (d$std)^2
+alpha_mu <- d$mean * beta_mu
+n <- length(beta_mu)
+
+samples <- replicate(n = 2000, rgamma(n, shape = alpha_mu, rate = beta_mu))
+
+t <- nrow(samples)
+l <- list(N = t, 
+		  y = samples, 
+		  x = 1:t, 
+		  n_samples = ncol(samples),
+		  num_pred = 1)
+
+
+
+stanfit1 <- rstan::stan(file = "./inst/stan/lin_reg_sampled_y.stan",
+                        data = l,
+                        iter = 4000, warmup = 800, thin = 1, control = list(adapt_delta = 0.97))
+
+
+# =====================
+# try bsts
+
+
+l <- list(N = n, 
+		  y = d$mean,
+		  n_pred = 1)
+
+
+stanfit2 <- rstan::stan(file = "./inst/stan/bsts.stan",
+                        data = l,
+                        iter = 4000, warmup = 800, thin = 1, control = list(adapt_delta = 0.97))
+
+
+
+my_stan_bsts <- function(y, n_pred = 10){
+	n <- length(y)
+	l <- list(N = n, y = y, n_pred = n_pred)
+
+	stanfit2 <- rstan::stan(file = "./inst/stan/bsts.stan" ,
+	                        data = l,
+	                        iter = 4000, warmup = 800, thin = 1, control = list(adapt_delta = 0.97))
+
+	sum <- summary(stanfit2)$summary
+	sum <- sum %>% as.data.frame(rownames(sum)) %>% mutate(var = rownames(sum)) 
+
+	params <- sum %>% filter(sum$var %in% c("sigma_epsilon", "sigma_eta", "phi", "D"))
+	rownames(params) <- params$var
+
+	predicted <- sum %>% filter(grepl("^y_pred", var))
+	rownames(predicted) <- predicted$var
+
+	res <- list(params = params, predicted = predicted, stanfit = stanfit2)
+
+	r <- res$predicted
+	r <- r[,c(1,4,8)]
+	colnames(r) <- c("mean", "low", "high")
+
+
+	res$plot <- ggplot(r, aes(x = 1:n_pred, y = mean, ymin = low, ymax = high)) + geom_line() + geom_ribbon(alpha = 0.5)
+
+	return(res)
+}
+
+res <- my_stan_bsts(d$mean)
 
 
 
