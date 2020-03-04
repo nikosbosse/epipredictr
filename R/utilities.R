@@ -98,7 +98,7 @@ fit_iteratively <- function(incidences,
 							interval = NULL,
 							start_period = 15,
 							max_n_past_obs = Inf,
-							model = NULL,
+							model = "bsts",
 							...) {
 
 	## track time
@@ -112,6 +112,7 @@ fit_iteratively <- function(incidences,
 
 	stanfitobjects <- list()
 	predictive_samples <- list()
+	forecast_run <-list()
 
 	## do fitting
 	i <- 0
@@ -132,18 +133,39 @@ fit_iteratively <- function(incidences,
 
 		y <- incidences[index]
 
+		if (model == "lin_reg") {
 		stanfit <- epipredictr::linear_regression(y = y, 
 												  num_pred = n_pred, 
 												  x = 1:length(y))
+		} else if (model == "bsts") {
+			stanfit <- epipredictr::bsts(y = y, 
+										 num_pred = n_pred)
+		}
 
 		i <- i + 1
 		stanfitobjects[[i]] <- stanfit
 		predictive_samples[[i]] <- epipredictr::extract_samples(stanfit)
+		forecast_run[[i]] <- rep(i, nrow(predictive_samples[[i]]))
+										 
+
 		current_last_obs <- current_last_obs + interval
 	}
     predictive_samples <- do.call("rbind", predictive_samples)
+    forecast_run <- do.call("c", forecast_run)
 
     last_n_to_display <- nrow(predictive_samples) - (current_last_obs - total_n)
-	print(time - Sys.time())
-	return(predictive_samples[1:last_n_to_display, ])
+
+
+    ## add NAs to the forecasts
+    predictive_samples <- rbind(matrix(NA, nrow = start_period - 1, 
+    									   ncol = ncol(predictive_samples)), 
+								predictive_samples[1:last_n_to_display, ])
+    forecast_run <- c(rep(NA, start_period - 1), forecast_run[1:last_n_to_display])
+
+
+	print(Sys.time() - time)
+	return(list(predictive_samples = predictive_samples, 
+		        forecast_run = forecast_run, 
+		        vert_lines = vert_lines))
 }
+

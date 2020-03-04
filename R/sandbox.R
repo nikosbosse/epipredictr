@@ -6,7 +6,6 @@ library(scoringutils)
 options(width=as.integer(160))
 library(dplyr)
 
-
 inc <- epipredictr::get_data()
 ts <- inc$daily
 fit <- epipredictr::linear_regression(y = ts) 
@@ -51,10 +50,65 @@ l <- list(N = n,
 		  y = d$mean,
 		  n_pred = 1)
 
+res <- epipredictr::bsts(y = d$mean, iter = 4000)
 
-stanfit2 <- rstan::stan(file = "./inst/stan/bsts.stan",
-                        data = l,
-                        iter = 4000, warmup = 800, thin = 1, control = list(adapt_delta = 0.97))
+ypred <- apply(y_pred, median, MARGIN = 2)
+
+my_pred_vs_true_inc_plot(y_pred = ypred, 
+						 y_true = d$mean, 
+						 forecast_run = res$forecast_run)
+
+
+
+
+plot_pred_vs_true <- function(y_true, 
+							  y_pred_samples,
+							  forecast_run = NULL){
+	pred_mean <- rowMeans(y_pred_samples)
+	pred_median <- apply(y_pred_samples, median, MARGIN = 1)
+	pred_quantiles <- t(apply(y_pred_samples, 
+								MARGIN = 1, 
+								FUN = quantile, 
+								probs = c(0.025, 0.25, 0.75, 0.975), 
+							    na.rm = TRUE))
+
+	df <- as.data.frame(cbind(y_true, pred_median, 
+							  pred_mean, pred_quantiles, forecast_run))
+	colnames(df) <- c("true", "median", "mean", "ci2.5", 
+					  "ci25", "ci75", "ci97.5", "forecast_run")
+
+	start_data <- sum(is.na(forecast_run))
+	interval <- sum(forecast_run == 1, na.rm = TRUE)
+	seq <- seq(start_data, length(forecast_run), interval)
+	vlines <- rep(NA, nrow(df))
+	vlines[seq] <- seq
+
+	plot <- ggplot(df, aes(x = 1:nrow(df)), group = forecast_run) +
+			geom_ribbon(aes(ymin =ci2.5, ymax = ci97.5), alpha = 0.3, 
+						fill = "lightblue") +
+			geom_ribbon(aes(ymin = ci25, ymax = ci75), alpha = 0.9, 
+						fill = "lightblue") + 
+			geom_line(aes(y = median), color = "blue") +
+			geom_line(aes(y = true)) +
+			geom_vline(aes(xintercept = vlines))
+	return(plot)
+}
+
+
+
+res <- fit_iteratively(incidences = d$mean, model = "bsts", n_pred = 14)
+
+(p <- plot_pred_vs_true(y_pred_samples = res$predictive_samples, 
+						y_true = y, 
+						forecast_run = res$forecast_run))
+
+
+vert_lines <- function(y, interval = 14, start_period = 15) {
+	n_total <- length(y)
+	vert_lines = seq(interval, n_total - start_period, interval)
+	return(vert_lines)
+}
+
 
 
 
