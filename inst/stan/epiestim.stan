@@ -3,6 +3,7 @@ data {
   int <lower = 0> obs_inc[t];
   int tau;
   int num_pred;
+  int <lower =0, upper =1> neg_binom_model;
 }
 
 transformed data{
@@ -25,19 +26,28 @@ transformed data{
 
 parameters{
   real <lower = 0> R[t];
-  real <lower = 0> phi;
+  real <lower = 0> phi[neg_binom_model];
 }
 
 model {
-  for (s in (tau + 1):t){
 
-    for (i in (s-tau + 1):s){
-      target += neg_binomial_2_lpmf(obs_inc[i] | R[s] * infectiousness[i], phi); 
-            
+  if (neg_binom_model == 1) {
+    for (s in (tau + 1):t){
+      for (i in (s-tau + 1):s){
+        target += neg_binomial_2_lpmf(obs_inc[i] | R[s] * infectiousness[i], phi[1]); 
+        //past_incidences[i] ~ neg_binomial_2(R[s] * infectiousness[i], phi);
+      }
+    }  
+  } else {
+    for (s in (tau + 1):t){
+      for (i in (s-tau + 1):s){
+        target += poisson_lpmf(obs_inc[i] | R[s] * infectiousness[i]); 
+        //past_incidences[i] ~ neg_binomial_2(R[s] * infectiousness[i], phi);
+      }
+    } 
 
-      //past_incidences[i] ~ neg_binomial_2(R[s] * infectiousness[i], phi);
-    }
   }
+  
   for (i in 1:t){
     R[i] ~ gamma(0.15, 0.1);    
   }

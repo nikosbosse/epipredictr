@@ -133,14 +133,21 @@ fit_iteratively <- function(incidences,
 
 		y <- incidences[index]
 
-		if (model == "lin_reg") {
-		stanfit <- epipredictr::linear_regression(y = y, 
-												  num_pred = n_pred, 
-												  x = 1:length(y))
-		} else if (model == "bsts") {
-			stanfit <- epipredictr::bsts(y = y, 
-										 num_pred = n_pred)
-		}
+		# if (model == "lin_reg") {
+		# stanfit <- epipredictr::linear_regression(y = y, 
+		# 										  num_pred = n_pred, 
+		# 										  x = 1:length(y))
+		# } else if (model == "bsts") {
+		# 	stanfit <- bsts(y = y, 
+		# 								 num_pred = n_pred, 
+		# 								 prior_var_phi = 0.5)
+		# } else {
+			l <- list(y = y, N = length(y), 
+					  n_pred = n_pred, prior_var_phi = 0.9)
+			stanfit <- rstan::sampling(model, data = l, 
+                        	iter = 4000, warmup = 800, thin = 1, 
+                        	control = list(adapt_delta = 0.97))
+		# }
 
 		i <- i + 1
 		stanfitobjects[[i]] <- stanfit
@@ -165,7 +172,65 @@ fit_iteratively <- function(incidences,
 
 	print(Sys.time() - time)
 	return(list(predictive_samples = predictive_samples, 
-		        forecast_run = forecast_run, 
-		        vert_lines = vert_lines))
+		        forecast_run = forecast_run)) 
+		        #vert_lines = vert_lines))
+
 }
 
+
+
+
+
+
+#' @title Plot predictive samples vs. true values
+#'
+#' @description
+#' Missing. 
+#' Also Todo: add an option for point estimates
+#' get the forecast_run thing tidy
+#' @param y_true Vector of length n with the true values
+#' fit the model and make predictions. 
+#' @param y_pred_samples predictive samples
+#' @param forecast_run vector indicating which forecast run an 
+#' esimtate belongs to
+#' 
+#' @return
+#' Missing
+#' @examples
+#' NULL
+#' @export 
+
+
+
+plot_pred_vs_true <- function(y_true, 
+							  y_pred_samples,
+							  forecast_run = NULL){
+	pred_mean <- rowMeans(y_pred_samples)
+	pred_median <- apply(y_pred_samples, median, MARGIN = 1)
+	pred_quantiles <- t(apply(y_pred_samples, 
+								MARGIN = 1, 
+								FUN = quantile, 
+								probs = c(0.025, 0.25, 0.75, 0.975), 
+							    na.rm = TRUE))
+
+	df <- as.data.frame(cbind(y_true, pred_median, 
+							  pred_mean, pred_quantiles, forecast_run))
+	colnames(df) <- c("true", "median", "mean", "ci2.5", 
+					  "ci25", "ci75", "ci97.5", "forecast_run")
+
+	start_data <- sum(is.na(forecast_run))
+	interval <- sum(forecast_run == 1, na.rm = TRUE)
+	seq <- seq(start_data, length(forecast_run), interval)
+	vlines <- rep(NA, nrow(df))
+	vlines[seq] <- seq
+
+	plot <- ggplot(df, aes(x = 1:nrow(df)), group = forecast_run) +
+			geom_ribbon(aes(ymin =ci2.5, ymax = ci97.5), alpha = 0.3, 
+						fill = "lightblue") +
+			geom_ribbon(aes(ymin = ci25, ymax = ci75), alpha = 0.9, 
+						fill = "lightblue") + 
+			geom_line(aes(y = median), color = "blue") +
+			geom_line(aes(y = true)) +
+			geom_vline(aes(xintercept = vlines))
+	return(plot)
+}

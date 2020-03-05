@@ -1,8 +1,8 @@
 data {
   int N;
-  int<lower=1> n_samples;
-  matrix[N, n_samples] y;
+  real y[N];
   int n_pred;
+  real prior_var_phi;
 }
 
 transformed data{
@@ -34,7 +34,7 @@ model {
   }
   delta[1] ~ normal(D, sigma_eta);
   D ~ normal(0,1);
-  phi ~ normal(0, 0.1);
+  phi ~ normal(0, prior_var_phi);
   sigma_eta ~ inv_gamma(1, 1); // random values I chose
   sigma_epsilon ~ inv_gamma(1, 1); // random values I chose
 }
@@ -65,5 +65,4 @@ generated quantities{
     delta_pred[s + 1] = normal_rng(D + phi * (delta_pred[s] - D), sigma_epsilon);
   }
 }
-
 

@@ -1,6 +1,10 @@
+/*
+
+
 data {
   int N;
-  real y[N];
+  int<lower=1> n_samples;
+  matrix[N, n_samples] y;
   int n_pred;
 }
 
@@ -23,15 +27,20 @@ parameters{
 
 /*transformed parameters{
 }
-*/
+
 model {
-  for (s in 1:(N-1)){
+
+  for (j in 1:n_samples) {
+    delta[1, j] ~ normal(D, sigma_eta);
+    for (s in 1:(N-1)){
     // vectorize
     // see https://mc-stan.org/docs/2_20/stan-users-guide/autoregressive-section.html
-    y[s+1] ~ normal(y[s] + delta[s], sigma_epsilon);
-    delta[s+1] ~ normal(D + phi * (delta[s] - D), sigma_eta);
+    y[s+1, j] ~ normal(y[s, j] + delta[s], sigma_epsilon);
+    delta[s+1, j] ~ normal(D + phi * (delta[s] - D), sigma_eta);
   }
-  delta[1] ~ normal(D, sigma_eta);
+
+  }
+  
   D ~ normal(0,1);
   phi ~ normal(0, 0.1);
   sigma_eta ~ inv_gamma(1, 1); // random values I chose
@@ -44,8 +53,8 @@ generated quantities{
   real y_pred[n_pred];
   real delta_pred[n_pred];
   real y_post[N];
-/*  real inc_post[N];
-  real inc_pred[N];*/
+ /*  real inc_post[N];
+  real inc_pred[N];
 
   // ========= posterior samples ========== //
 
@@ -65,4 +74,6 @@ generated quantities{
   }
 }
 
+
+*/
 

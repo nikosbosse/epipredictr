@@ -31,7 +31,9 @@ linear_regression <- function(y, x = NULL, num_pred = 10, ...) {
 bsts <- function(y, num_pred = 10, ...) {
   standata <- list(y = y, 
   	               N = length(y), 
-  	               n_pred = num_pred)
+  	               n_pred = num_pred, 
+                   prior_var_phi = 0.1)
+
   out <- rstan::sampling(stanmodels$bsts, data = standata, ...)
   return(out)
 }

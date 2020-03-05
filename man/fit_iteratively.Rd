@@ -5,7 +5,7 @@
 \title{Iteratively fit a model to the data}
 \usage{
 fit_iteratively(incidences, n_pred = 14, interval = NULL,
-  start_period = 15, max_n_past_obs = Inf, model = NULL, ...)
+  start_period = 15, max_n_past_obs = Inf, model = "bsts", ...)
 }
 \arguments{
 \item{incidences}{Vector of length n with the past incidences used to 
