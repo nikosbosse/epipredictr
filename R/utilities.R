@@ -100,7 +100,6 @@ fit_iteratively <- function(incidences,
 							max_n_past_obs = Inf,
 							model = "bsts",
 							...) {
-
 	## track time
 	time <- Sys.time()
 
@@ -133,11 +132,11 @@ fit_iteratively <- function(incidences,
 
 		y <- incidences[index]
 
-		if (class(model) = "character" & model == "lin_reg") {
+		if (class(model) == "character" & model == "lin_reg") {
 		stanfit <- epipredictr::linear_regression(y = y, 
 												  num_pred = n_pred, 
 												  x = 1:length(y))
-		} else if (class(model) = "character" & model == "bsts") {
+		} else if (class(model) == "character" & model == "bsts") {
 			stanfit <- bsts(y = y, 
 										 num_pred = n_pred, 
 										 prior_var_phi = 0.5)
@@ -173,7 +172,9 @@ fit_iteratively <- function(incidences,
 
 	print(Sys.time() - time)
 	return(list(predictive_samples = predictive_samples, 
-		        forecast_run = forecast_run)) 
+		        forecast_run = forecast_run, 
+		        stanfitobjects = stanfitobjects)) 
+
 }
 
 
@@ -232,4 +233,10 @@ plot_pred_vs_true <- function(y_true,
 			geom_line(aes(y = true)) +
 			geom_vline(aes(xintercept = vlines))
 	return(plot)
+}
+
+
+
+plot_prior_vs_posterior <- function() {
+	
 }

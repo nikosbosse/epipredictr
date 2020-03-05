@@ -15,7 +15,7 @@ a <- fit_iteratively(ts)
 
 
 
-
+source("R/utilities.R")
 
 # ======================================================== #
 # try estimates for R0 values
@@ -29,28 +29,103 @@ res <- epipredictr::bsts(y = d$mean, iter = 4000)
 
 model <- stan_model(file = "./inst/stan/bsts.stan")
 
-res <- fit_iteratively(incidences = d$mean, model = model, n_pred = 7, 
-					   max_n_past_obs = Inf)
+res_lin <- fit_iteratively(incidences = d$mean, model = "lin_reg", n_pred = 7, 
+					   max_n_past_obs = 3)
+
+res_bsts <- fit_iteratively(incidences = d$mean, model = "lin_reg", n_pred = 7, 
+					   max_n_past_obs = 7)
+
+
+
 y <- d$mean
 
-(p <- plot_pred_vs_true(y_pred_samples = res$predictive_samples, 
+(p <- plot_pred_vs_true(y_pred_samples = res_lin$predictive_samples, 
 						y_true = y, 
-						forecast_run = res$forecast_run))
+						forecast_run = res_lin$forecast_run))
+
+
+
+my_pred_vs_true_inc_plot(y_pred = rowMeans(res_lin$predictive_samples), 
+						 y_true = y)
+
+
+model <- stan_model(file = "./inst/stan/bsts_local_trend.stan")
+
+stanfit <- rstan::sampling(model, data = l, 
+                        	iter = 4000, warmup = 800, thin = 1, 
+                        	control = list(adapt_delta = 0.97))
 
 
 
 
+scoringutils::eval_forecasts(true_values = y[15:76], 
+							 predictions = res_lin$predictive_samples[15:76, ])
 
 
 
 
+plot_prior_vs_posterior <- function(posterior_samples, 
+							        prior_function, 
+							        ...) {
+
+	samples <- data.frame(ps = as.vector(posterior_samples))
+	plot <- ggplot2::ggplot(samples, aes(x = ps)) + 
+							geom_histogram(color = 'darkblue',
+										   fill = 'lightblue',
+										   bins = 100) +
+							stat_function(fun=dnorm)
+
+plot
+	
+}
 
 
 
+my_plot_two_histograms <- function(vector1, vector2, 
+								   breaks = 100, 
+								   upper_limit = NULL){
+	if(!is.null(upper_limit)){
+		vector1 <- vector1[vector1 < upper_limit]
+		vector2 <- vector2[vector2 < upper_limit]
+	}
 
+	## set breakpoints and define minimum 
+	## breakpoint a and maximum breakpoint b
+	a <- min(c(vector1, vector2)) 
+	b <- max(c(vector1, vector2)) 
 
+	## define axis
+	ax <- pretty(a:b, n = breaks)
 
+	while(min(ax) > a | max(ax) < b){
+		if (min(ax) > a){
+		a <- a - (ax[2] - ax[1])
+		}
+		if (max(ax) < b){
+		b <- b + (ax[2] - ax[1])
+		}
+		ax <- pretty(a:b, n = breaks)
+	}
 
+	
+
+	## make histogram A and B
+	plot1 <- hist(vector1, breaks = ax, plot = FALSE)
+	plot1$density = plot1$counts/sum(plot1$counts)
+	plot2 <- hist(vector2, breaks = ax, plot = FALSE)
+	plot2$density = plot2$counts/sum(plot2$counts)
+
+	## set correct font
+	par(family = "Serif")
+
+	## define two colors
+	col1 <- rgb(168,209,225,max = 255, alpha = 75)
+	col2 <- rgb(248,183,193, max = 255, alpha = 75)
+
+	## plot and add 2nd plot to first
+	plot(plot1, col = col1, xlab = "vec1 is blue, vec2 is pink", xlim = c(a, b)) 
+	plot(plot2, col = col2, add = TRUE) 
+}
 
 
 
