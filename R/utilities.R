@@ -133,21 +133,22 @@ fit_iteratively <- function(incidences,
 
 		y <- incidences[index]
 
-		# if (model == "lin_reg") {
-		# stanfit <- epipredictr::linear_regression(y = y, 
-		# 										  num_pred = n_pred, 
-		# 										  x = 1:length(y))
-		# } else if (model == "bsts") {
-		# 	stanfit <- bsts(y = y, 
-		# 								 num_pred = n_pred, 
-		# 								 prior_var_phi = 0.5)
-		# } else {
+		if (class(model) = "character" & model == "lin_reg") {
+		stanfit <- epipredictr::linear_regression(y = y, 
+												  num_pred = n_pred, 
+												  x = 1:length(y))
+		} else if (class(model) = "character" & model == "bsts") {
+			stanfit <- bsts(y = y, 
+										 num_pred = n_pred, 
+										 prior_var_phi = 0.5)
+		} else {
 			l <- list(y = y, N = length(y), 
-					  n_pred = n_pred, prior_var_phi = 0.9)
+					  n_pred = n_pred, prior_var_phi = 0.5, 
+					  length_local_trend = 3)
 			stanfit <- rstan::sampling(model, data = l, 
                         	iter = 4000, warmup = 800, thin = 1, 
                         	control = list(adapt_delta = 0.97))
-		# }
+		}
 
 		i <- i + 1
 		stanfitobjects[[i]] <- stanfit
@@ -173,8 +174,6 @@ fit_iteratively <- function(incidences,
 	print(Sys.time() - time)
 	return(list(predictive_samples = predictive_samples, 
 		        forecast_run = forecast_run)) 
-		        #vert_lines = vert_lines))
-
 }
 
 
