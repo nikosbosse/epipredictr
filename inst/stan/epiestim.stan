@@ -52,7 +52,14 @@ model {
     R[i] ~ gamma(0.15, 0.1);    
   }
   phi ~ gamma(0.05, 0.05);  
-  
-
 }
 
+generated quantities {
+  real phi_prior;
+  real R_prior;
+
+  // ========= prior samples ========== //
+  phi_prior = gamma_rng(0.05, 0.05);  
+  R_prior = gamma_rng(0.15, 0.1);  
+}
+  

@@ -65,6 +65,16 @@ generated quantities{
 /*  real inc_post[N];
   real inc_pred[N];*/
 
+  real phi_prior;
+  real sigma_eta_prior;
+  real sigma_epsilon_prior;
+
+
+  // ========= prior samples ========== //
+  phi_prior = normal_rng(0, prior_var_phi);
+  sigma_eta_prior = inv_gamma_rng(1, 1); // random values I chose
+  sigma_epsilon_prior = inv_gamma_rng(1, 1); // random values I chose
+
   // ========= posterior samples ========== //
 
   y_post[1] = normal_rng(y[1], sigma_epsilon);

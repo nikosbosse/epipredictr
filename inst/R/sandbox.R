@@ -62,22 +62,54 @@ scoringutils::eval_forecasts(true_values = y[15:76],
 							 predictions = res_lin$predictive_samples[15:76, ])
 
 
+ggplot(data.frame(x=c(0, 2)), aes(x)) + stat_function(fun=exp)
 
+posterior_samples <- rnorm(100000)
+prior_function = rnorm
 
 plot_prior_vs_posterior <- function(posterior_samples, 
 							        prior_function, 
+							        params_prior_function,
 							        ...) {
 
-	samples <- data.frame(ps = as.vector(posterior_samples))
-	plot <- ggplot2::ggplot(samples, aes(x = ps)) + 
-							geom_histogram(color = 'darkblue',
-										   fill = 'lightblue',
-										   bins = 100) +
+	
+	posterior <- as.vector(rnorm(1000000))
+	posterior <- posterior[!is.na(posterior)]
+
+	prior <- unlist(do.call(prior_function, 
+						 	args = params_prior_function))  +1
+
+
+	df <- data.frame(prior = prior, posterior = posterior)
+	samples <- as.data.frame(as.vector(res$predictive_samples))
+
+	plot <- ggplot2::ggplot(df, aes(x = posterior)) + 
+							geom_histogram(fill = 'lightblue',
+										   bins = 100, alpha = 0.3) + 
+							geom_histogram(fill = 'red',
+										   bins = 100, alpha = 0.3, 
+										   aes (x = prior)) +
 							stat_function(fun=dnorm)
 
-plot
+
+
+
+ggplot(posterior, aes(sample, variable, fill = variable)) +
+  ggridges::geom_density_ridges() +
+  geom_vline(xintercept = simple_reg.data$beta, linetype = 'dashed', colour = 'red') +
+  facet_wrap(~type) +
+  coord_cartesian(xlim = c(-4, 4)) +
+  guides(fill = F) +
+  labs(
+    title = 'Density of the prior and posterior',
+    x = '',
+    y = ''
+  )
+
+
 	
 }
+
 
 
 
