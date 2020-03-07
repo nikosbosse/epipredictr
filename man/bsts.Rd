@@ -4,7 +4,7 @@
 \alias{bsts}
 \title{BSTS with Stan}
 \usage{
-bsts(y, num_pred = 10, vb = FALSE, ...)
+bsts(y, num_pred = 10, vb = FALSE, prior_var_phi = 0.1, ...)
 }
 \arguments{
 \item{y}{Numeric vector of output values, i.e. vector of a series of R_t values}

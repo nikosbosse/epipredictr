@@ -40,7 +40,7 @@ res_lin <- fit_iteratively(incidences = y_true, model = model_lin_reg,
  					       max_n_past_obs = 7, vb = FALSE)
 
 res_bsts <- fit_iteratively(incidences = y_true, 
-							model = "bsts", n_pred = 7, 
+							model = "bsts_local_trend", n_pred = 7, 
 							max_n_past_obs = 7, vb = FALSE)
 
 
@@ -87,21 +87,12 @@ plot_grid(p_reg, p_bsts, p_bsts_local, labels = "AUTO", ncol = 1)
 # a <- res_bsts$stanfitobjects[[2]]
 # b <- extract_log_lik(a)
 
-
-
-
-
-
-
-
-
-
-
 scoringutils::eval_forecasts(true_values = y[15:76], 
 							 predictions = res_lin$predictive_samples[15:76, ])
 
 
-ggplot(data.frame(x=c(0, 2)), aes(x)) + stat_function(fun=exp)
+# =======================================================
+# plot prior vs. posterior 
 
 posterior_samples <- rnorm(100000)
 prior_function = rnorm
@@ -133,21 +124,19 @@ plot_prior_vs_posterior <- function(posterior_samples,
 
 
 
-ggplot(posterior, aes(sample, variable, fill = variable)) +
-  ggridges::geom_density_ridges() +
-  geom_vline(xintercept = simple_reg.data$beta, linetype = 'dashed', colour = 'red') +
-  facet_wrap(~type) +
-  coord_cartesian(xlim = c(-4, 4)) +
-  guides(fill = F) +
-  labs(
-    title = 'Density of the prior and posterior',
-    x = '',
-    y = ''
-  )
+# ggplot(posterior, aes(sample, variable, fill = variable)) +
+#   ggridges::geom_density_ridges() +
+#   geom_vline(xintercept = simple_reg.data$beta, linetype = 'dashed', colour = 'red') +
+#   facet_wrap(~type) +
+#   coord_cartesian(xlim = c(-4, 4)) +
+#   guides(fill = F) +
+#   labs(
+#     title = 'Density of the prior and posterior',
+#     x = '',
+#     y = ''
+#   )
 
 
-	
-}
 
 
 
@@ -197,6 +186,16 @@ my_plot_two_histograms <- function(vector1, vector2,
 	plot(plot1, col = col1, xlab = "vec1 is blue, vec2 is pink", xlim = c(a, b)) 
 	plot(plot2, col = col2, add = TRUE) 
 }
+
+
+
+
+
+
+
+
+
+
 
 
 

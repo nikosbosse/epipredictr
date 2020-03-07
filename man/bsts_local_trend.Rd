@@ -4,7 +4,8 @@
 \alias{bsts_local_trend}
 \title{BSTS with Stan and local trend}
 \usage{
-bsts_local_trend(y, num_pred = 10, vb = FALSE, ...)
+bsts_local_trend(y, num_pred = 10, vb = FALSE, length_local_trend,
+  prior_var_phi = 0.1, ...)
 }
 \arguments{
 \item{y}{Numeric vector of output values, i.e. vector of a series of R_t values}

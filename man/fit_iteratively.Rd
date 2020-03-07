@@ -6,7 +6,7 @@
 \usage{
 fit_iteratively(incidences, n_pred = 14, interval = NULL,
   start_period = 15, max_n_past_obs = Inf, model = "bsts",
-  n_samples = 4000, vb = FALSE, ...)
+  n_samples = 4000, vb = FALSE, length_local_trend = 7, ...)
 }
 \arguments{
 \item{incidences}{Vector of length n with the past incidences used to 

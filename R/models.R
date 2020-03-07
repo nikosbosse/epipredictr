@@ -62,12 +62,12 @@ bsts <- function(y, num_pred = 10, vb = FALSE, prior_var_phi = 0.1, ...) {
 #'
 
 bsts_local_trend <- function(y, num_pred = 10, vb = FALSE, 
-                             length_local_trend, ...) {
+                             length_local_trend, prior_var_phi = 0.1, ...) {
   standata <- list(y = y, 
                    N = length(y), 
                    n_pred = num_pred, 
                    length_local_trend = length_local_trend,
-                   prior_var_phi = 0.1)
+                   prior_var_phi = prior_var_phi)
 
   if (vb == TRUE) {
     out <- rstan::vb(stanmodels$bsts_local_trend, data = standata, ...)

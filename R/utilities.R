@@ -138,7 +138,8 @@ fit_iteratively <- function(incidences,
 		}
 		y <- incidences[index]
 
-		stanfit <- fit_stan_model(y, model, n_pred = n_pred, vb = vb)
+		stanfit <- fit_stan_model(y, model, n_pred = n_pred, vb = vb, 
+							      length_local_trend = length_local_trend)
 
 		## store results
 		i <- i + 1
