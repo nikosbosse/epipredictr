@@ -4,7 +4,7 @@
 \alias{extract_samples}
 \title{Extract Predictive Samples From Stanobject}
 \usage{
-extract_samples(stanfitobject, predictive = TRUE)
+extract_samples(stanfitobject, type = "predictive")
 }
 \arguments{
 \item{stanfitobject}{a stanfitobject}

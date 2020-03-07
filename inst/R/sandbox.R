@@ -5,6 +5,7 @@ rstan_options(auto_write = TRUE)
 library(scoringutils)
 options(width=as.integer(160))
 library(dplyr)
+library(cowplot)
 
 inc <- epipredictr::get_data()
 ts <- inc$daily
@@ -16,44 +17,82 @@ a <- fit_iteratively(ts)
 
 
 source("R/utilities.R")
+source("R/models.R")
+source("R/stanmodels.R")
+
 
 # ======================================================== #
 # try estimates for R0 values
 # ======================================================== #
 d <- readRDS("data/time_varying_params.rds")[[1]]
+y_true <- d$mean
 
-# =====================
-# try bsts
 
+# =======================================================
 res <- epipredictr::bsts(y = d$mean, iter = 4000)
 
-model <- stan_model(file = "./inst/stan/bsts.stan")
+model_lin_reg <- stan_model(file = "./inst/stan/linear_regression.stan")
+res_lin <- fit_iteratively(incidences = y_true, model = "lin_reg", n_pred = 7, 
+					   max_n_past_obs = 7, vb = FALSE)
 
-res_lin <- fit_iteratively(incidences = d$mean, model = "lin_reg", n_pred = 7, 
-					   max_n_past_obs = 3)
+res_lin <- fit_iteratively(incidences = y_true, model = model_lin_reg, 
+						   n_pred = 7, 
+ 					       max_n_past_obs = 7, vb = FALSE)
 
-res_bsts <- fit_iteratively(incidences = d$mean, model = "lin_reg", n_pred = 7, 
-					   max_n_past_obs = 7)
-
-
-
-y <- d$mean
-
-(p <- plot_pred_vs_true(y_pred_samples = res_lin$predictive_samples, 
-						y_true = y, 
-						forecast_run = res_lin$forecast_run))
+res_bsts <- fit_iteratively(incidences = y_true, 
+							model = "bsts", n_pred = 7, 
+							max_n_past_obs = 7, vb = FALSE)
 
 
+model_bsts <- stan_model(file = "./inst/stan/bsts.stan")
+res_bsts <- fit_iteratively(incidences = y_true, 
+							model = model_bsts, n_pred = 7, 
+							max_n_past_obs = Inf, vb = FALSE)
 
-my_pred_vs_true_inc_plot(y_pred = rowMeans(res_lin$predictive_samples), 
-						 y_true = y)
+
+model_bsts_local <- stan_model(file = "./inst/stan/bsts_local_trend.stan")
+res_bsts_local <- fit_iteratively(incidences = y_true, 
+								  model = model_bsts_local, 
+								  n_pred = 7, 
+								  max_n_past_obs = 7, vb = FALSE)
 
 
-model <- stan_model(file = "./inst/stan/bsts_local_trend.stan")
+# =======================================================
+## do plots
+p_reg <- plot_pred_vs_true(y_pred_samples = res_lin$predictive_samples, 
+						y_true = res_lin$y, 
+						forecast_run = res_lin$forecast_run)
 
-stanfit <- rstan::sampling(model, data = l, 
-                        	iter = 4000, warmup = 800, thin = 1, 
-                        	control = list(adapt_delta = 0.97))
+
+p_bsts <- plot_pred_vs_true(y_pred_samples = res_bsts$predictive_samples, 
+						y_true = res_bsts$y, 
+						forecast_run = res_bsts$forecast_run)
+
+p_bsts_local <- plot_pred_vs_true(y_pred_samples = res_bsts_local$predictive_samples, 
+						y_true = res_bsts_local$y, 
+						forecast_run = res_bsts_local$forecast_run)
+
+
+plot_grid(p_reg, p_bsts, p_bsts_local, labels = "AUTO", ncol = 1)
+
+# =======================================================
+
+
+# =======================================================
+# do checking of predictions
+
+## todo: get log_likelihood implemented in stan
+# library(loo)
+# loo::waic(a)
+# a <- res_bsts$stanfitobjects[[2]]
+# b <- extract_log_lik(a)
+
+
+
+
+
+
+
 
 
 

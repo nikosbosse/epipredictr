@@ -4,7 +4,7 @@
 \alias{linear_regression}
 \title{Bayesian linear regression with Stan}
 \usage{
-linear_regression(y, x = NULL, num_pred = 10, ...)
+linear_regression(y, x = NULL, num_pred = 10, vb = FALSE, ...)
 }
 \arguments{
 \item{y}{Numberic vector of output values.}

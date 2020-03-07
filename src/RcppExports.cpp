@@ -7,9 +7,21 @@
 using namespace Rcpp;
 
 
+RcppExport SEXP _rcpp_module_boot_stan_fit4bsts_mod();
+RcppExport SEXP _rcpp_module_boot_stan_fit4bsts_local_trend_mod();
+RcppExport SEXP _rcpp_module_boot_stan_fit4bsts_sampled_y_mod();
+RcppExport SEXP _rcpp_module_boot_stan_fit4epiestim_mod();
+RcppExport SEXP _rcpp_module_boot_stan_fit4lin_reg_gamma_noise_around_y_mod();
+RcppExport SEXP _rcpp_module_boot_stan_fit4lin_reg_sampled_y_mod();
 RcppExport SEXP _rcpp_module_boot_stan_fit4linear_regression_mod();
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_rcpp_module_boot_stan_fit4bsts_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4bsts_mod, 0},
+    {"_rcpp_module_boot_stan_fit4bsts_local_trend_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4bsts_local_trend_mod, 0},
+    {"_rcpp_module_boot_stan_fit4bsts_sampled_y_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4bsts_sampled_y_mod, 0},
+    {"_rcpp_module_boot_stan_fit4epiestim_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4epiestim_mod, 0},
+    {"_rcpp_module_boot_stan_fit4lin_reg_gamma_noise_around_y_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4lin_reg_gamma_noise_around_y_mod, 0},
+    {"_rcpp_module_boot_stan_fit4lin_reg_sampled_y_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4lin_reg_sampled_y_mod, 0},
     {"_rcpp_module_boot_stan_fit4linear_regression_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4linear_regression_mod, 0},
     {NULL, NULL, 0}
 };

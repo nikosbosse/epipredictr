@@ -1,0 +1,78 @@
+---
+output: html_document
+---
+
+
+# Epipredictr
+
+```{r, echo=FALSE, output=FALSE}
+library(epipredictr)
+library(rstan)
+options(mc.cores = 4)
+rstan_options(auto_write = TRUE)
+library(scoringutils)
+library(dplyr)
+knitr::opts_knit$set(root.dir = 'epipredictr/', 
+					 fig.path = "epipredictr/inst/report/figure")
+library(cowplot)
+source("./R/utilities.R")
+source("./R/models.R")
+```
+
+
+Load data
+```{r echo = FALSE}
+d <- readRDS("../../data/time_varying_params.rds")[[1]]
+y_true <- d$mean
+
+```
+
+
+```{r echo = FALSE}
+model_lin_reg <- stan_model(file = "./inst/stan/linear_regression.stan")
+# res_lin <- fit_iteratively(incidences = y_true, model = "lin_reg", n_pred = 7, 
+# 					   max_n_past_obs = 7, vb = FALSE)
+
+res_lin <- fit_iteratively(incidences = y_true, model = model_lin_reg, 
+						   n_pred = 7, 
+ 					       max_n_past_obs = 7, vb = FALSE)
+
+# res_bsts <- fit_iteratively(incidences = y_true, 
+# 							model = "bsts", n_pred = 7, 
+# 							max_n_past_obs = 7, vb = FALSE)
+
+
+model_bsts <- stan_model(file = "./inst/stan/bsts.stan")
+res_bsts <- fit_iteratively(incidences = y_true, 
+							model = model_bsts, n_pred = 7, 
+							max_n_past_obs = Inf, vb = FALSE)
+
+
+model_bsts_local <- stan_model(file = "./inst/stan/bsts_local_trend.stan")
+res_bsts_local <- fit_iteratively(incidences = y_true, 
+								  model = model_bsts_local, 
+								  n_pred = 7, 
+								  max_n_past_obs = 7, vb = FALSE)
+
+
+
+```
+
+```{r echo = FALSE}
+p_reg <- plot_pred_vs_true(y_pred_samples = res_lin$predictive_samples, 
+						y_true = res_lin$y, 
+						forecast_run = res_lin$forecast_run)
+
+
+p_bsts <- plot_pred_vs_true(y_pred_samples = res_bsts$predictive_samples, 
+						y_true = res_bsts$y, 
+						forecast_run = res_bsts$forecast_run)
+
+p_bsts_local <- plot_pred_vs_true(y_pred_samples = res_bsts_local$predictive_samples, 
+						y_true = res_bsts_local$y, 
+						forecast_run = res_bsts_local$forecast_run)
+
+
+plot_grid(p_reg, p_bsts, p_bsts_local, labels = "AUTO", ncol = 1)
+```
+
