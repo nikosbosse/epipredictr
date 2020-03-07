@@ -86,10 +86,11 @@ plot_grid(p_reg, p_bsts, p_bsts_local, labels = "AUTO", ncol = 1)
 # loo::waic(a)
 # a <- res_bsts$stanfitobjects[[2]]
 # b <- extract_log_lik(a)
+install_github("epiforecasts/scoringutils")
 
-scoringutils::eval_forecasts(true_values = y[15:76], 
-							 predictions = res_lin$predictive_samples[15:76, ])
-
+scoringutils::eval_forecasts(true_values = y_true[15:76], 
+							 predictions = res_lin$predictive_samples[15:76, ], 
+							 outcome_type = "continuous")
 
 # =======================================================
 # plot prior vs. posterior 

@@ -64,37 +64,34 @@ output: html_document
 ## ********************************************************
 ```
 
-
-Load data
-
-
-
-
 ```
-## run  1 of  9 
-## run  2 of  9 
-## run  3 of  9 
-## run  4 of  9 
-## run  5 of  9 
-## run  6 of  9 
-## run  7 of  9 
-## run  8 of  9 
-## run  9 of  9 
-## Time difference of 14.90578 secs
+## Warning in file(filename, "r", encoding = encoding): cannot open file './R/
+## utilities.R': No such file or directory
 ```
 
 ```
-## run  1 of  9 
-## run  2 of  9 
-## run  3 of  9 
-## run  4 of  9 
-## run  5 of  9 
-## run  6 of  9 
-## run  7 of  9 
-## run  8 of  9 
-## run  9 of  9 
-## Time difference of 41.67772 secs
+## Error in file(filename, "r", encoding = encoding): cannot open the connection
 ```
+
+```
+## Warning in file(filename, "r", encoding = encoding): cannot open file './R/
+## models.R': No such file or directory
+```
+
+```
+## Error in file(filename, "r", encoding = encoding): cannot open the connection
+```
+
+
+```
+## [1] "/mnt/data/Google Drive/Uni/Statistik/Masterarbeit Statistik/epipredictr"
+```
+
+
+
+
+
+
 
 ```
 ## run  1 of  9 
@@ -106,16 +103,42 @@ Load data
 ## run  7 of  9 
 ## run  8 of  9 
 ## run  9 of  9 
-## Time difference of 35.91401 secs
+## Time difference of 16.30764 secs
+```
+
+```
+## run  1 of  9 
+## run  2 of  9 
+## run  3 of  9 
+## run  4 of  9 
+## run  5 of  9 
+## run  6 of  9 
+## run  7 of  9 
+## run  8 of  9 
+## run  9 of  9 
+## Time difference of 58.63296 secs
+```
+
+```
+## run  1 of  9 
+## run  2 of  9 
+## run  3 of  9 
+## run  4 of  9 
+## run  5 of  9 
+## run  6 of  9 
+## run  7 of  9 
+## run  8 of  9 
+## run  9 of  9 
+## Time difference of 38.39963 secs
 ```
 
 
 ```
-## Warning: Removed 14 rows containing missing values (geom_path).
+## Warning: Removed 14 row(s) containing missing values (geom_path).
 ```
 
 ```
-## Warning: Removed 7 rows containing missing values (geom_path).
+## Warning: Removed 7 row(s) containing missing values (geom_path).
 ```
 
 ```
@@ -123,28 +146,50 @@ Load data
 ```
 
 ```
-## Warning: Removed 14 rows containing missing values (geom_path).
+## Warning: Removed 14 row(s) containing missing values (geom_path).
 ```
 
 ```
-## Warning: Removed 7 rows containing missing values (geom_path).
-```
-
-```
-## Warning: Removed 73 rows containing missing values (geom_vline).
-```
-
-```
-## Warning: Removed 14 rows containing missing values (geom_path).
-```
-
-```
-## Warning: Removed 7 rows containing missing values (geom_path).
+## Warning: Removed 7 row(s) containing missing values (geom_path).
 ```
 
 ```
 ## Warning: Removed 73 rows containing missing values (geom_vline).
 ```
 
-![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-4-1.png)
+```
+## Warning: Removed 14 row(s) containing missing values (geom_path).
+```
+
+```
+## Warning: Removed 7 row(s) containing missing values (geom_path).
+```
+
+```
+## Warning: Removed 73 rows containing missing values (geom_vline).
+```
+
+![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-5-1.png)
+
+## Scoring results
+
+```
+##           mean        sd
+## CRPS 0.5215598 0.5346214
+## logs 2.4278156 2.1932004
+```
+
+```
+##           mean        sd
+## CRPS 0.2767039 0.2088452
+## logs 0.6600462 0.7555615
+```
+
+```
+##           mean        sd
+## CRPS 0.3740202 0.3679544
+## logs 0.8818242 0.7521707
+```
+
+
 

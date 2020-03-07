@@ -5,24 +5,28 @@ output: html_document
 
 # Epipredictr
 
-```{r, echo=FALSE, output=FALSE}
+```{r, echo=FALSE}
 library(epipredictr)
 library(rstan)
 options(mc.cores = 4)
 rstan_options(auto_write = TRUE)
 library(scoringutils)
 library(dplyr)
-knitr::opts_knit$set(root.dir = 'epipredictr/', 
-					 fig.path = "epipredictr/inst/report/figure")
+knitr::opts_knit$set(root.dir = 'epipredictr/')
+knitr::opts_knit$set(fig.path = 'epipredictr/inst/report/figure')
 library(cowplot)
 source("./R/utilities.R")
 source("./R/models.R")
 ```
 
-
-Load data
 ```{r echo = FALSE}
-d <- readRDS("../../data/time_varying_params.rds")[[1]]
+getwd()
+```
+
+
+
+```{r echo = FALSE}
+d <- readRDS("./data/time_varying_params.rds")[[1]]
 y_true <- d$mean
 
 ```
@@ -75,4 +79,22 @@ p_bsts_local <- plot_pred_vs_true(y_pred_samples = res_bsts_local$predictive_sam
 
 plot_grid(p_reg, p_bsts, p_bsts_local, labels = "AUTO", ncol = 1)
 ```
+
+## Scoring results
+```{r echo = FALSE}
+scoringutils::eval_forecasts(true_values = y_true[15:76], 
+							 predictions = res_lin$predictive_samples[15:76, ], 
+							 outcome_type = "continuous")
+
+scoringutils::eval_forecasts(true_values = y_true[15:76], 
+							 predictions = res_bsts$predictive_samples[15:76, ], 
+							 outcome_type = "continuous")
+
+scoringutils::eval_forecasts(true_values = y_true[15:76], 
+							 predictions = res_bsts_local$predictive_samples[15:76, ], 
+							 outcome_type = "continuous")
+
+```
+
+
 
