@@ -25,7 +25,7 @@ parameters{
   real delta[N];
   real D[N];
   real intercept[N];
-  real sd_trend;
+  real <lower = 0> sd_trend;
 
 }
 

@@ -7,18 +7,17 @@ options(width=as.integer(160))
 library(dplyr)
 library(cowplot)
 
-inc <- epipredictr::get_data()
-ts <- inc$daily
-fit <- epipredictr::linear_regression(y = ts) 
-p <- extract_samples(fit, predictive = F)
-scoringutils::eval_forecasts(true_values = ts, predictions = p)
-a <- fit_iteratively(ts)
+# inc <- epipredictr::get_data()
+# ts <- inc$daily
+# fit <- epipredictr::linear_regression(y = ts) 
+# p <- extract_samples(fit, predictive = F)
+# scoringutils::eval_forecasts(true_values = ts, predictions = p)
+# a <- fit_iteratively(ts)
 
 
 
 source("R/utilities.R")
 source("R/models.R")
-source("R/stanmodels.R")
 
 
 # ======================================================== #
@@ -31,19 +30,11 @@ y_south_korea <- d$mean
 
 
 # =======================================================
-res <- epipredictr::bsts(y = d$mean, iter = 4000)
 
 model_lin_reg <- stan_model(file = "./inst/stan/linear_regression.stan")
-res_lin <- fit_iteratively(incidences = y_true, model = "lin_reg", n_pred = 7, 
-					   max_n_past_obs = 7, vb = FALSE)
-
 res_lin <- fit_iteratively(incidences = y_true, model = model_lin_reg, 
 						   n_pred = 7, 
  					       max_n_past_obs = 7, vb = FALSE)
-
-res_bsts <- fit_iteratively(incidences = y_south_korea, 
-							model = "bsts", n_pred = 7, 
-							max_n_past_obs = Inf, vb = FALSE)
 
 
 model_bsts <- stan_model(file = "./inst/stan/bsts.stan")
@@ -70,15 +61,13 @@ p_reg <- plot_pred_vs_true(y_pred_samples = res_lin$predictive_samples,
 p_bsts <- plot_pred_vs_true(y_pred_samples = res_bsts$predictive_samples, 
 						y_true = res_bsts$y, 
 						forecast_run = res_bsts$forecast_run)
+p_bsts
 
 p_bsts_local <- plot_pred_vs_true(y_pred_samples = res_bsts_local$predictive_samples, 
 						y_true = res_bsts_local$y, 
 						forecast_run = res_bsts_local$forecast_run)
+p_bsts_local
 
-
-(hist(abs(rnorm(1000, 0.5)), family = "Serif", breaks = 60))
-
-mean(rexp(1000, rate = 3), family = "Serif", breaks = 50)
 
 
 
@@ -95,164 +84,21 @@ plot_grid(p_reg, p_bsts, p_bsts_local, labels = "AUTO", ncol = 1)
 # loo::waic(a)
 # a <- res_bsts$stanfitobjects[[2]]
 # b <- extract_log_lik(a)
-install_github("epiforecasts/scoringutils")
 
-scoringutils::eval_forecasts(true_values = y_true[15:76], 
-							 predictions = res_lin$predictive_samples[15:76, ], 
-							 outcome_type = "continuous")
 
 # =======================================================
 # plot prior vs. posterior 
 
 stanfit <- res_bsts$stanfitobjects[[1]]
-
-
-
-
-
-
-
-# coord_cartesian(xlim = c(minx, maxx)) +
-				
+		
 prior_post <- plot_prior_vs_posterior(res_bsts$stanfitobjects)
 prior_post$plot
 
-tail(a$df)
-max(a$df$samples)
-
-which(a$df$samples == max(a$df$samples))
-a$df[9340: 9381, ]
-
-
-head(df)
-
-
-df <- data.frame(samples = rnorm(1002, mean = c(1,2)), 
-				 type = c("posterior", "prior"), 
-				 name = c("phi", "sigma", "sigma_eta"), 
-				 run = 1)
-
-df2 <- data.frame(samples = rnorm(1002, mean = c(1,2)), 
-				 type = c("posterior", "prior"), 
-				 name = c("phi", "sigma", "sigma_eta"), 
-				 run = 2)
-
-df <- rbind(df, df2)
-
-
-
-scoringutils::pit
-
-
-ggplot(df, aes(x = samples, fill = name)) +
- geom_histogram(aes(samples))
- ggridges::geom_density_ridges() +
-  facet_wrap(~ type) +
-#  coord_cartesian(xlim = c(-4, 4)) +
-  guides(fill = F) +
-  labs(
-    title = 'Density of the prior and posterior',
-    x = '',
-    y = ''
-  )
 
 
 
 
 
-
-posterior_samples <- rnorm(100000)
-prior_function = rnorm
-
-plot_prior_vs_posterior <- function(posterior_samples, 
-							        prior_function, 
-							        params_prior_function,
-							        ...) {
-
-	
-	posterior <- as.vector(rnorm(1000000))
-	posterior <- posterior[!is.na(posterior)]
-
-	prior <- unlist(do.call(prior_function, 
-						 	args = params_prior_function))  +1
-
-
-	df <- data.frame(prior = prior, posterior = posterior)
-	samples <- as.data.frame(as.vector(res$predictive_samples))
-
-	plot <- ggplot2::ggplot(df, aes(x = posterior)) + 
-							geom_histogram(fill = 'lightblue',
-										   bins = 100, alpha = 0.3) + 
-							geom_histogram(fill = 'red',
-										   bins = 100, alpha = 0.3, 
-										   aes (x = prior)) +
-							stat_function(fun=dnorm)
-
-
-
-
-# ggplot(posterior, aes(sample, variable, fill = variable)) +
-#   ggridges::geom_density_ridges() +
-#   geom_vline(xintercept = simple_reg.data$beta, linetype = 'dashed', colour = 'red') +
-#   facet_wrap(~type) +
-#   coord_cartesian(xlim = c(-4, 4)) +
-#   guides(fill = F) +
-#   labs(
-#     title = 'Density of the prior and posterior',
-#     x = '',
-#     y = ''
-#   )
-
-
-
-
-
-
-my_plot_two_histograms <- function(vector1, vector2, 
-								   breaks = 100, 
-								   upper_limit = NULL){
-	if(!is.null(upper_limit)){
-		vector1 <- vector1[vector1 < upper_limit]
-		vector2 <- vector2[vector2 < upper_limit]
-	}
-
-	## set breakpoints and define minimum 
-	## breakpoint a and maximum breakpoint b
-	a <- min(c(vector1, vector2)) 
-	b <- max(c(vector1, vector2)) 
-
-	## define axis
-	ax <- pretty(a:b, n = breaks)
-
-	while(min(ax) > a | max(ax) < b){
-		if (min(ax) > a){
-		a <- a - (ax[2] - ax[1])
-		}
-		if (max(ax) < b){
-		b <- b + (ax[2] - ax[1])
-		}
-		ax <- pretty(a:b, n = breaks)
-	}
-
-	
-
-	## make histogram A and B
-	plot1 <- hist(vector1, breaks = ax, plot = FALSE)
-	plot1$density = plot1$counts/sum(plot1$counts)
-	plot2 <- hist(vector2, breaks = ax, plot = FALSE)
-	plot2$density = plot2$counts/sum(plot2$counts)
-
-	## set correct font
-	par(family = "Serif")
-
-	## define two colors
-	col1 <- rgb(168,209,225,max = 255, alpha = 75)
-	col2 <- rgb(248,183,193, max = 255, alpha = 75)
-
-	## plot and add 2nd plot to first
-	plot(plot1, col = col1, xlab = "vec1 is blue, vec2 is pink", xlim = c(a, b)) 
-	plot(plot2, col = col2, add = TRUE) 
-}
 
 
 
