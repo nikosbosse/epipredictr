@@ -16,10 +16,13 @@ linear_regression <- function(y, x = NULL, num_pred = 10, vb = FALSE, ...) {
   	               num_pred = num_pred)
 
   if (vb == TRUE) {
-    out <- rstan::vb(stanmodels$linear_regression, data = standata, ...)
+    out <- rstan::vb(stanmodels$linear_regression, data = standata, 
+                     control = list(adapt_delta = 0.99), ...)
+
 
   } else {
-    out <- rstan::sampling(stanmodels$linear_regression, data = standata, ...)
+    out <- rstan::sampling(stanmodels$linear_regression, data = standata, 
+                           control = list(adapt_delta = 0.99), ...)
   }
   return(out)
 }
@@ -41,10 +44,12 @@ bsts <- function(y, num_pred = 10, vb = FALSE, prior_var_phi = 0.1, ...) {
                    prior_var_phi = prior_var_phi)
 
   if (vb == TRUE) {
-    out <- rstan::vb(stanmodels$bsts, data = standata, ...)
+    out <- rstan::vb(stanmodels$bsts, data = standata, 
+                     control = list(adapt_delta = 0.99), ...)
 
   } else {
-    out <- rstan::sampling(stanmodels$bsts, data = standata, ...)
+    out <- rstan::sampling(stanmodels$bsts, data = standata, 
+                     control = list(adapt_delta = 0.99), ...)
   }
   return(out)
 }

@@ -33,7 +33,7 @@ static int current_statement_begin__;
 stan::io::program_reader prog_reader__() {
     stan::io::program_reader reader;
     reader.add_event(0, 0, "start", "model_linear_regression");
-    reader.add_event(32, 30, "end", "model_linear_regression");
+    reader.add_event(45, 43, "end", "model_linear_regression");
     return reader;
 }
 #include <stan_meta_header.hpp>
@@ -224,6 +224,12 @@ public:
             // model body
             current_statement_begin__ = 15;
             lp_accum__.add(normal_log<propto__>(y, add(intercept, multiply(beta, x)), sigma));
+            current_statement_begin__ = 17;
+            lp_accum__.add(normal_log<propto__>(beta, 0, 2));
+            current_statement_begin__ = 18;
+            lp_accum__.add(normal_log<propto__>(sigma, 0, 2));
+            current_statement_begin__ = 19;
+            lp_accum__.add(normal_log<propto__>(intercept, 0, 3));
         } catch (const std::exception& e) {
             stan::lang::rethrow_located(e, current_statement_begin__, prog_reader__());
             // Next line prevents compiler griping about no return
@@ -249,6 +255,9 @@ public:
         names__.push_back("sigma");
         names__.push_back("y_pred");
         names__.push_back("y_fit");
+        names__.push_back("beta_prior");
+        names__.push_back("sigma_prior");
+        names__.push_back("intercept_prior");
     }
     void get_dims(std::vector<std::vector<size_t> >& dimss__) const {
         dimss__.resize(0);
@@ -264,6 +273,12 @@ public:
         dimss__.push_back(dims__);
         dims__.resize(0);
         dims__.push_back(N);
+        dimss__.push_back(dims__);
+        dims__.resize(0);
+        dimss__.push_back(dims__);
+        dims__.resize(0);
+        dimss__.push_back(dims__);
+        dims__.resize(0);
         dimss__.push_back(dims__);
     }
     template <typename RNG>
@@ -296,44 +311,71 @@ public:
             if (!include_gqs__ && !include_tparams__) return;
             if (!include_gqs__) return;
             // declare and define generated quantities
-            current_statement_begin__ = 19;
+            current_statement_begin__ = 24;
             validate_non_negative_index("y_pred", "num_pred", num_pred);
             Eigen::Matrix<double, Eigen::Dynamic, 1> y_pred(num_pred);
             stan::math::initialize(y_pred, DUMMY_VAR__);
             stan::math::fill(y_pred, DUMMY_VAR__);
-            current_statement_begin__ = 20;
+            current_statement_begin__ = 25;
             validate_non_negative_index("y_fit", "N", N);
             Eigen::Matrix<double, Eigen::Dynamic, 1> y_fit(N);
             stan::math::initialize(y_fit, DUMMY_VAR__);
             stan::math::fill(y_fit, DUMMY_VAR__);
+            current_statement_begin__ = 27;
+            double beta_prior;
+            (void) beta_prior;  // dummy to suppress unused var warning
+            stan::math::initialize(beta_prior, DUMMY_VAR__);
+            stan::math::fill(beta_prior, DUMMY_VAR__);
+            current_statement_begin__ = 28;
+            double sigma_prior;
+            (void) sigma_prior;  // dummy to suppress unused var warning
+            stan::math::initialize(sigma_prior, DUMMY_VAR__);
+            stan::math::fill(sigma_prior, DUMMY_VAR__);
+            current_statement_begin__ = 29;
+            double intercept_prior;
+            (void) intercept_prior;  // dummy to suppress unused var warning
+            stan::math::initialize(intercept_prior, DUMMY_VAR__);
+            stan::math::fill(intercept_prior, DUMMY_VAR__);
             // generated quantities statements
-            current_statement_begin__ = 22;
+            current_statement_begin__ = 31;
             for (int i = 1; i <= N; ++i) {
-                current_statement_begin__ = 23;
+                current_statement_begin__ = 32;
                 stan::model::assign(y_fit, 
                             stan::model::cons_list(stan::model::index_uni(i), stan::model::nil_index_list()), 
                             normal_rng((intercept + (beta * i)), sigma, base_rng__), 
                             "assigning variable y_fit");
             }
-            current_statement_begin__ = 26;
+            current_statement_begin__ = 35;
             for (int i = 1; i <= num_pred; ++i) {
-                current_statement_begin__ = 27;
+                current_statement_begin__ = 36;
                 stan::model::assign(y_pred, 
                             stan::model::cons_list(stan::model::index_uni(i), stan::model::nil_index_list()), 
                             normal_rng((intercept + (beta * (N + i))), sigma, base_rng__), 
                             "assigning variable y_pred");
             }
+            current_statement_begin__ = 39;
+            stan::math::assign(beta_prior, normal_rng(0, 2, base_rng__));
+            current_statement_begin__ = 40;
+            stan::math::assign(sigma_prior, stan::math::fabs(normal_rng(0, 2, base_rng__)));
+            current_statement_begin__ = 41;
+            stan::math::assign(intercept_prior, normal_rng(0, 3, base_rng__));
             // validate, write generated quantities
-            current_statement_begin__ = 19;
+            current_statement_begin__ = 24;
             size_t y_pred_j_1_max__ = num_pred;
             for (size_t j_1__ = 0; j_1__ < y_pred_j_1_max__; ++j_1__) {
                 vars__.push_back(y_pred(j_1__));
             }
-            current_statement_begin__ = 20;
+            current_statement_begin__ = 25;
             size_t y_fit_j_1_max__ = N;
             for (size_t j_1__ = 0; j_1__ < y_fit_j_1_max__; ++j_1__) {
                 vars__.push_back(y_fit(j_1__));
             }
+            current_statement_begin__ = 27;
+            vars__.push_back(beta_prior);
+            current_statement_begin__ = 28;
+            vars__.push_back(sigma_prior);
+            current_statement_begin__ = 29;
+            vars__.push_back(intercept_prior);
         } catch (const std::exception& e) {
             stan::lang::rethrow_located(e, current_statement_begin__, prog_reader__());
             // Next line prevents compiler griping about no return
@@ -389,6 +431,15 @@ public:
             param_name_stream__ << "y_fit" << '.' << j_1__ + 1;
             param_names__.push_back(param_name_stream__.str());
         }
+        param_name_stream__.str(std::string());
+        param_name_stream__ << "beta_prior";
+        param_names__.push_back(param_name_stream__.str());
+        param_name_stream__.str(std::string());
+        param_name_stream__ << "sigma_prior";
+        param_names__.push_back(param_name_stream__.str());
+        param_name_stream__.str(std::string());
+        param_name_stream__ << "intercept_prior";
+        param_names__.push_back(param_name_stream__.str());
     }
     void unconstrained_param_names(std::vector<std::string>& param_names__,
                                    bool include_tparams__ = true,
@@ -419,6 +470,15 @@ public:
             param_name_stream__ << "y_fit" << '.' << j_1__ + 1;
             param_names__.push_back(param_name_stream__.str());
         }
+        param_name_stream__.str(std::string());
+        param_name_stream__ << "beta_prior";
+        param_names__.push_back(param_name_stream__.str());
+        param_name_stream__.str(std::string());
+        param_name_stream__ << "sigma_prior";
+        param_names__.push_back(param_name_stream__.str());
+        param_name_stream__.str(std::string());
+        param_name_stream__ << "intercept_prior";
+        param_names__.push_back(param_name_stream__.str());
     }
 }; // model
 }  // namespace

@@ -1,0 +1,116 @@
+---
+title: "Forecasting time-varying transmission during the COVID-19 outbreak"
+output: rmarkdown::html_document
+vignette: >
+  %\VignetteIndexEntry{prediction_report}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+*N. Bosse (1), S. Abbott (1), J. D. Munday (1), J. Hellewell (1), CMMID COVID team (1), S. Funk (1).*
+
+*Correspondence to: nikos.bosse@lshtm.ac.uk* 
+
+*1. Center for the Mathematical Modelling of Infectious Diseases, London School of Hygiene & Tropical Medicine, London WC1E 7HT, United Kingdom*
+
+*Last Updated:* `r (Sys.Date() - 1)`
+
+*Note: this is preliminary analysis, has not yet been peer-reviewed and is updated daily as new data becomes available. This work is licensed under a [Creative Commons Attribution 4.0 International License](https://creativecommons.org/licenses/by/4.0/). A summary of this report can be downloaded [here](https://cmmid.github.io/topics/covid19/current-patterns-transmission/reports/global-time-varying-transmission/summary.pdf)*
+
+# Summary
+## Aim
+Forecast the time-varying $R_t$ estimates into the future to get a sense of the trajectory of the COVID-19 epidemic in different countries. 
+
+## Abstract
+
+## Methods
+We used three different models
+
+1. windowed regression
+2. BSTS with a global trend
+3. BSTS with a local trend
+
+to forecast transmission rates. Predictions were made using R and Stan and results were scored using CRPS and LogS using the scoringRules package. 
+
+## Key Results {.tabset}
+
+### table
+test
+
+### graph
+test graph
+
+-	[ ] graph with predictions by every country for best model
+-	[ ] table with 
+		- CI for forecasts
+		- Past forecast score? 
+
+
+
+# Details
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r load-packages, include=FALSE}
+library(epipredictr)
+```
+
+
+
+```{r load-data, include=FALSE}
+getwd()
+# d <- readRDS("./data/time_varying_params.rds")[[1]]
+# y_true <- d$mean
+
+```
+
+```{r}
+getwd()
+plot(1:10)
+
+
+```
+
+
+```{r eval=FALSE, echo = FALSE, results="hide", message = FALSE, warning = FALSE}
+## Windowed Regression 
+# model_lin_reg <- stan_model(file = "./inst/stan/linear_regression.stan")
+# res_lin <- fit_iteratively(incidences = y_true, model = model_lin_reg, 
+# 						   n_pred = 7, 
+#  					       max_n_past_obs = 7, vb = FALSE)
+
+res_lin <- fit_iteratively(incidences = y_true, model = "lin_reg", n_pred = 7,	   				     max_n_past_obs = 7, vb = FALSE)
+
+
+
+## BSTS global trend
+# model_bsts <- stan_model(file = "./inst/stan/bsts.stan")
+# res_bsts <- fit_iteratively(incidences = y_true, 
+# 							model = model_bsts, n_pred = 7, 
+# 							max_n_past_obs = Inf, vb = FALSE)
+res_bsts <- fit_iteratively(incidences = y_true, 
+							model = "bsts", n_pred = 7, 
+							max_n_past_obs = Inf, vb = FALSE)
+
+
+
+## BSTS local trend
+# model_bsts_local <- stan_model(file = "./inst/stan/bsts_local_trend.stan")
+# res_bsts_local <- fit_iteratively(incidences = y_true, 
+# 								  model = model_bsts_local, 
+# 								  n_pred = 7, 
+# 								  max_n_past_obs = Inf, vb = FALSE)
+
+res_bsts_local <- fit_iteratively(incidences = y_true, 
+							model = "bsts_local_trend", n_pred = 7, 
+							max_n_past_obs = Inf, vb = FALSE, 
+							length_local_trend = 7)
+
+
+
+```

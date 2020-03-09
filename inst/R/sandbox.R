@@ -24,8 +24,10 @@ source("R/stanmodels.R")
 # ======================================================== #
 # try estimates for R0 values
 # ======================================================== #
-d <- readRDS("data/time_varying_params.rds")[[1]]
-y_true <- d$mean
+d <- readRDS("data/time_varying_params_south_korea.rds")[[1]]
+y_south_korea <- d$mean
+
+
 
 
 # =======================================================
@@ -39,19 +41,20 @@ res_lin <- fit_iteratively(incidences = y_true, model = model_lin_reg,
 						   n_pred = 7, 
  					       max_n_past_obs = 7, vb = FALSE)
 
-res_bsts <- fit_iteratively(incidences = y_true, 
-							model = "bsts_local_trend", n_pred = 7, 
-							max_n_past_obs = 7, vb = FALSE)
+res_bsts <- fit_iteratively(incidences = y_south_korea, 
+							model = "bsts", n_pred = 7, 
+							max_n_past_obs = Inf, vb = FALSE)
 
 
 model_bsts <- stan_model(file = "./inst/stan/bsts.stan")
-res_bsts <- fit_iteratively(incidences = y_true, 
+res_bsts <- fit_iteratively(incidences = y_south_korea, 
 							model = model_bsts, n_pred = 7, 
+							prior_var_phi = 0.8, 
 							max_n_past_obs = Inf, vb = FALSE)
 
 
 model_bsts_local <- stan_model(file = "./inst/stan/bsts_local_trend.stan")
-res_bsts_local <- fit_iteratively(incidences = y_true, 
+res_bsts_local <- fit_iteratively(incidences = y_south_korea, 
 								  model = model_bsts_local, 
 								  n_pred = 7, 
 								  max_n_past_obs = 7, vb = FALSE)
@@ -71,6 +74,12 @@ p_bsts <- plot_pred_vs_true(y_pred_samples = res_bsts$predictive_samples,
 p_bsts_local <- plot_pred_vs_true(y_pred_samples = res_bsts_local$predictive_samples, 
 						y_true = res_bsts_local$y, 
 						forecast_run = res_bsts_local$forecast_run)
+
+
+(hist(abs(rnorm(1000, 0.5)), family = "Serif", breaks = 60))
+
+mean(rexp(1000, rate = 3), family = "Serif", breaks = 50)
+
 
 
 plot_grid(p_reg, p_bsts, p_bsts_local, labels = "AUTO", ncol = 1)
@@ -94,6 +103,63 @@ scoringutils::eval_forecasts(true_values = y_true[15:76],
 
 # =======================================================
 # plot prior vs. posterior 
+
+stanfit <- res_bsts$stanfitobjects[[1]]
+
+
+
+
+
+
+
+# coord_cartesian(xlim = c(minx, maxx)) +
+				
+prior_post <- plot_prior_vs_posterior(res_bsts$stanfitobjects)
+prior_post$plot
+
+tail(a$df)
+max(a$df$samples)
+
+which(a$df$samples == max(a$df$samples))
+a$df[9340: 9381, ]
+
+
+head(df)
+
+
+df <- data.frame(samples = rnorm(1002, mean = c(1,2)), 
+				 type = c("posterior", "prior"), 
+				 name = c("phi", "sigma", "sigma_eta"), 
+				 run = 1)
+
+df2 <- data.frame(samples = rnorm(1002, mean = c(1,2)), 
+				 type = c("posterior", "prior"), 
+				 name = c("phi", "sigma", "sigma_eta"), 
+				 run = 2)
+
+df <- rbind(df, df2)
+
+
+
+scoringutils::pit
+
+
+ggplot(df, aes(x = samples, fill = name)) +
+ geom_histogram(aes(samples))
+ ggridges::geom_density_ridges() +
+  facet_wrap(~ type) +
+#  coord_cartesian(xlim = c(-4, 4)) +
+  guides(fill = F) +
+  labs(
+    title = 'Density of the prior and posterior',
+    x = '',
+    y = ''
+  )
+
+
+
+
+
 
 posterior_samples <- rnorm(100000)
 prior_function = rnorm
@@ -245,6 +311,7 @@ l <- list(N = t,
 stanfit1 <- rstan::stan(file = "./inst/stan/lin_reg_sampled_y.stan",
                         data = l,
                         iter = 4000, warmup = 800, thin = 1, control = list(adapt_delta = 0.97))
+
 
 
 

@@ -52,8 +52,8 @@ model {
 
 
   phi ~ normal(0, prior_var_phi);
-  sigma_eta ~ inv_gamma(1, 1); // random values I chose
-  sigma_epsilon ~ inv_gamma(1, 1); // random values I chose
+  sigma_eta ~ exponential(3); // random values I chose
+  sigma_epsilon ~ exponential(3); // random values I chose
 }
 
 
@@ -72,8 +72,8 @@ generated quantities{
 
   // ========= prior samples ========== //
   phi_prior = normal_rng(0, prior_var_phi);
-  sigma_eta_prior = inv_gamma_rng(1, 1); // random values I chose
-  sigma_epsilon_prior = inv_gamma_rng(1, 1); // random values I chose
+  sigma_eta_prior = exponential_rng(3); // random values I chose
+  sigma_epsilon_prior = exponential_rng(3); // random values I chose
 
   // ========= posterior samples ========== //
 
