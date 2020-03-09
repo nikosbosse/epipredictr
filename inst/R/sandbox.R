@@ -7,6 +7,8 @@ options(width=as.integer(160))
 library(dplyr)
 library(cowplot)
 library(patchwork)
+library(bsts)
+par(family = "Serif")
 
 # inc <- epipredictr::get_data()
 # ts <- inc$daily
@@ -15,39 +17,64 @@ library(patchwork)
 # scoringutils::eval_forecasts(true_values = ts, predictions = p)
 # a <- fit_iteratively(ts)
 
-
-
 source("R/utilities.R")
 source("R/models.R")
 
 
 
 # ======================================================== #
-# try estimates for R0 values
+# 
 # ======================================================== #
-d <- readRDS("data/time_varying_params_south_korea.rds")[[1]]
-y_south_korea <- d$mean
+
+sk <- readRDS("data/time_varying_params_south_korea.rds")[[1]]
+it <- readRDS("data/time_varying_params_italy.rds")[[1]]
+# uk <- readRDS("data/time_varying_params_uk.rds")[[1]]
+jp <- readRDS("data/time_varying_params_japan.rds")[[1]]
+sp <- readRDS("data/time_varying_params_singapore.rds")[[1]]
+
+model_lin_reg <- stan_model(file = "./inst/stan/linear_regression.stan")
+model_bsts <- stan_model(file = "./inst/stan/bsts.stan")
+model_bsts_local_trend <- stan_model(file = "./inst/stan/bsts_local_trend.stan")
+models <- list(model_lin_reg, model_bsts, model_bsts_local_trend, "local", "semilocal")
+
+
+
+y_sk <- sk$median
+res_sk <- do_all_fits(y_sk, models, include_stan = F)
+res_sk <- add_average_model(res_sk)
+(plot_sk <- plot_forecast_compare(res_sk))
+compare_forecasts(res_sk2)
+compare_bsts_models(y_sk)
+ggsave("vignettes/figure/south_korea.png", plot_sk)
+
+y_jp <- jp$median
+res_jp <- do_all_fits(y_jp, models, include_stan = F)
+plot_jp <- plot_forecast_compare(res_jp)
+compare_forecasts(res_jp)
+ggsave("./vignettes/figure/japan.png", plot_jp)
+
+y_sp <- sp$median
+res_sp <- do_all_fits(y_sp, models, include_stan = F)
+plot_sp <- plot_forecast_compare(res_sp)
+compare_forecasts(res_sp)
+ggsave("vignettes/figure/singapore.png", plot_sp)
+
+y_it <- it$median
+res_it <- do_all_fits(y_it, models, include_stan = F)
+plot_it <- plot_forecast_compare(res_it)
+compare_forecasts(res_it)
+ggsave("./vignettes/figure/italy.png", plot_it)
 
 
 
 
-res <- do_all_fits(y_south_korea)
 
 
-plot_forecast_compare <- function(pred_results) {
-	plots <- lapply(seq_along(pred_results), 
-					FUN = function (i) {
-						plot_pred_vs_true(
-						 y_pred_samples = pred_results[[i]]$predictive_samples, 
-						 y_true = pred_results[[i]]$y, 
-						 forecast_run = pred_results[[i]]$forecast_run)
-			        })
 
-	wrap_plots(plots, ncol = 1)
 
-}
 
-plot_forecast_compare(res)
+
+
 
 
 

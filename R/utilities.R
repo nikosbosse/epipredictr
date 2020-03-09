@@ -97,11 +97,10 @@ extract_samples <- function(stanfitobject,
 
 
 
-
 fit_iteratively <- function(incidences, 
 							n_pred = 14, 
 							interval = NULL,
-							start_period = 15,
+							start_period = 8,
 							max_n_past_obs = Inf,
 							model = "bsts",
 							n_samples = 4000,
@@ -189,8 +188,8 @@ fit_iteratively <- function(incidences,
 								     	extract_samples(stanfit))
 		} else {
 			predictive_samples <- rbind(predictive_samples,			
-										bsts_semilocal_linear_trend(y, 
-									   								num_pred  = n_pred))
+										bsts_wrapper(y, model,
+												     num_pred  = n_pred))
 		}
 
 	forecast_run <- c(forecast_run, rep(i, n_pred))
@@ -281,7 +280,8 @@ fit_stan_model <-function(y, model, n_pred, vb,
 
 plot_pred_vs_true <- function(y_true, 
 							  y_pred_samples,
-							  forecast_run = NULL){
+							  forecast_run = NULL, 
+							  plottitle = "Pred vs. True"){
 	pred_mean <- rowMeans(y_pred_samples)
 	pred_median <- apply(y_pred_samples, median, MARGIN = 1)
 	pred_quantiles <- t(apply(y_pred_samples, 
@@ -316,6 +316,7 @@ plot_pred_vs_true <- function(y_true,
 			geom_line(aes(y = median), color = "blue") +
 			geom_line(aes(y = true)) +
 			geom_vline(aes(xintercept = vlines)) +
+			ggtitle(plottitle) +
 			theme(text = element_text(family = 'Serif'))
 	return(plot)
 }
@@ -407,13 +408,21 @@ bsts_wrapper <- function(y, model,
 						 n_iter = 2000) {
 	if (model == "semilocal") {
 		ss <- AddSemilocalLinearTrend(list(), y)	
-	} else {
+	} else if (model == "local"){
 		ss <- AddLocalLinearTrend(list(), y)	
+	} else if (model == "local_student"){
+		ss <- AddStudentLocalLinearTrend(list(), y)	
+	} else if (model == "ar1"){
+		ss <- AddAr(list(), y, lags = 1) 
+	} else if (model == "ar2"){
+		ss <- AddAr(list(), y, lags = 2) 
 	}
+
 	bsts.model <- bsts::bsts(y, state.specification = ss, niter = 1000, ping=0)
-	burn <- SuggestBurn(0.1, bsts.model)
+	#burn <- SuggestBurn(0.1, bsts.model)
 	p <- predict.bsts(bsts.model, horizon = 7, burn = 100, quantiles = c(.025, .975))
 	return(t(p$distribution))
+
 }
 
 
@@ -433,29 +442,30 @@ bsts_wrapper <- function(y, model,
 #' NULL
 #' @export 
 
-do_all_fits <- function(y) {
+do_all_fits <- function(y, include_stan = FALSE, models = NULL) {
 	res <- list()
 	stanfitlist <- list()
+	scores <-list()
 
-	## lin_reg_stan
-	model_lin_reg <- stan_model(file = "./inst/stan/linear_regression.stan")
-	res$lin_reg_stan <- fit_iteratively(incidences = y, model = model_lin_reg, 
-						   n_pred = 7, iter = 5000,
- 					       max_n_past_obs = 7, vb = FALSE)
-
+	if (isTRUE(include_stan)) {
+		## lin_reg_stan
+		model_lin_reg <- models[[1]]
+		res$lin_reg_stan <- fit_iteratively(incidences = y, model = model_lin_reg, 
+							   n_pred = 7, iter = 5000,
+	 					       max_n_past_obs = 7, vb = FALSE)
 	 	
-	model_bsts <- stan_model(file = "./inst/stan/bsts.stan")
-	res$bsts_stan <- fit_iteratively(incidences = y, 
-							model = model_bsts, n_pred = 7, iter = 5000,
-							prior_var_phi = 0.8, mean_phi = 1,
-							max_n_past_obs = Inf, vb = FALSE)
+		model_bsts <- models[[2]]
+		res$bsts_stan <- fit_iteratively(incidences = y, 
+								model = model_bsts, n_pred = 7, iter = 5000,
+								prior_var_phi = 0.8, mean_phi = 1,
+								max_n_past_obs = Inf, vb = FALSE)
 
-	model_bsts_local <- stan_model(file = "./inst/stan/bsts_local_trend.stan")
-	res$bsts_local_stan <- fit_iteratively(incidences = y, 
-								  model = model_bsts_local, 
-								  n_pred = 7, iter = 5000,
-								  max_n_past_obs = 7, vb = FALSE)
-	
+		model_bsts_local <- models[[3]]
+		res$bsts_local_stan <- fit_iteratively(incidences = y, 
+									  model = model_bsts_local, 
+									  n_pred = 7, iter = 5000,
+									  max_n_past_obs = 7, vb = FALSE)
+	}
 
 	res$bsts_local <- fit_iteratively(incidences = y, 
 					  model = "local", n_pred = 7,
@@ -465,5 +475,156 @@ do_all_fits <- function(y) {
 					  model = "semilocal", n_pred = 7,
 					  fit_type = "bsts_package")
 
+	res$bsts_local_student <- fit_iteratively(incidences = y, 
+					  model = "local_student", n_pred = 7,
+					  fit_type = "bsts_package")
+
+	res$bsts_ar1 <- fit_iteratively(incidences = y, 
+					  model = "ar1", n_pred = 7,
+					  fit_type = "bsts_package")
+
+	res$bsts_ar2 <- fit_iteratively(incidences = y, 
+					  model = "ar2", n_pred = 7,
+					  fit_type = "bsts_package")
+
+
 	return(res)
+}
+
+
+#' @title Wrapper to make a visual plot to compare the outputs of do_all_fits
+#'
+#' @description
+#' Missing. 
+#' Also Todo: handling for only one item 
+#' @param y 
+#' 
+#' @return
+#' Missing
+#' @examples
+#' NULL
+#' @export 
+
+
+plot_forecast_compare <- function(pred_results) {
+	titles <- names(pred_results)
+	plots <- lapply(seq_along(pred_results), 
+					FUN = function (i) {
+						plot_pred_vs_true(
+						 y_pred_samples = pred_results[[i]]$predictive_samples, 
+						 y_true = pred_results[[i]]$y, 
+						 forecast_run = pred_results[[i]]$forecast_run, 
+						 plottitle = titles[i]
+						)
+			        })
+
+	(p <- wrap_plots(plots, ncol = 1))
+	return(p)
+
+}
+
+
+#' @title Wrapper to compare forecasts
+#'
+#' @description
+#' Missing. 
+#' Also Todo: handling for only one item 
+#' @param y 
+#' 
+#' @return
+#' Missing
+#' @examples
+#' NULL
+#' @export 
+
+
+compare_forecasts <- function (pred_results) {
+	titles <- names(pred_results)
+	scores <- lapply(seq_along(pred_results), 
+					 FUN = function (i) {
+					 	y <- pred_results[[i]]$y
+					 	pred <- pred_results[[i]]$predictive_samples
+					 	forecast_run <- pred_results[[i]]$forecast_run
+					 	ind <- (!is.na(y) & !is.na(forecast_run))
+					 	y <- y[ind]
+					 	pred <- pred[ind, ]
+
+
+					 	tmp <- scoringutils::eval_forecasts(
+					 			true_values = y, 
+					 			predictions = pred, 
+					 			prediction_type = "probabilistic", 
+					 			outcome_type = "continuous")
+					 	return(cbind(tmp, model = titles[i]))
+					 })
+	scores <- do.call(rbind, scores)
+	scores <- scores[order(scores$mean, scores$model), ]
+
+	return(scores)
+}
+
+#' @title Wrapper to select the best bsts model from the package
+#'
+#' @description
+#' Missing. 
+#' Also Todo: handling for only one item 
+#' @param y 
+#' 
+#' @return
+#' Missing
+#' @examples
+#' NULL
+#' @export 
+
+compare_bsts_models <- function(y) {
+	bsts <- list()
+
+	ss1 <- AddSemilocalLinearTrend(list(), y)	
+	ss2 <- AddLocalLinearTrend(list(), y)	
+	ss3 <- AddStudentLocalLinearTrend(list(), y)	
+	ss4 <- AddAr(list(), y, lags = 1) 
+	ss5 <- AddAr(list(), y, lags = 2) 
+	
+	bsts$semilocal <- bsts::bsts(y, state.specification = ss1, niter = 1000, ping=0)
+	bsts$local <- bsts::bsts(y, state.specification = ss2, niter = 1000, ping=0)
+	bsts$local_student <- bsts::bsts(y, state.specification = ss3, niter = 1000, ping=0)
+	bsts$ar1 <- bsts::bsts(y, state.specification = ss4, niter = 1000, ping=0)
+	bsts$ar2 <- bsts::bsts(y, state.specification = ss5, niter = 1000, ping=0)
+
+	CompareBstsModels(bsts)
+
+}
+
+
+#' @title Do very basic model averaging
+#'
+#' @description
+#' Missing. 
+#' Also Todo: handling for only one item 
+#' @param y 
+#' 
+#' @return
+#' Missing
+#' @examples
+#' NULL
+#' @export 
+
+
+add_average_model <- function(pred_results) {
+	tmp <- lapply(seq_along(pred_results), 
+				  FUN = function(i) {
+				  	p <- pred_results[[i]]
+				  	p <- p$predictive_samples
+				  	return(p)
+				  })
+
+	pred <- tmp[[1]]
+	for (i in 2:length(pred_results)) {
+		pred <- pred + tmp[[i]] 
+	}
+	avg <- pred / length(pred_results)
+	pred_results$average$predictive_samples <- avg
+	pred_results$average$y <- pred_results[[1]]$y
+	pred_results$average$forecast_run <- pred_results[[1]]$forecast_run
+	return(pred_results)
 }
