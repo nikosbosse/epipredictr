@@ -6,6 +6,7 @@ library(scoringutils)
 options(width=as.integer(160))
 library(dplyr)
 library(cowplot)
+library(patchwork)
 
 # inc <- epipredictr::get_data()
 # ts <- inc$daily
@@ -20,6 +21,7 @@ source("R/utilities.R")
 source("R/models.R")
 
 
+
 # ======================================================== #
 # try estimates for R0 values
 # ======================================================== #
@@ -29,26 +31,37 @@ y_south_korea <- d$mean
 
 
 
+res <- do_all_fits(y_south_korea)
+
+
+plot_forecast_compare <- function(pred_results) {
+	plots <- lapply(seq_along(pred_results), 
+					FUN = function (i) {
+						plot_pred_vs_true(
+						 y_pred_samples = pred_results[[i]]$predictive_samples, 
+						 y_true = pred_results[[i]]$y, 
+						 forecast_run = pred_results[[i]]$forecast_run)
+			        })
+
+	wrap_plots(plots, ncol = 1)
+
+}
+
+plot_forecast_compare(res)
+
+
+
+
+
+
+
+
+
 # =======================================================
 
-model_lin_reg <- stan_model(file = "./inst/stan/linear_regression.stan")
-res_lin <- fit_iteratively(incidences = y_true, model = model_lin_reg, 
-						   n_pred = 7, 
- 					       max_n_past_obs = 7, vb = FALSE)
 
 
-model_bsts <- stan_model(file = "./inst/stan/bsts.stan")
-res_bsts <- fit_iteratively(incidences = y_south_korea, 
-							model = model_bsts, n_pred = 7, 
-							prior_var_phi = 0.8, mean_phi = 1,
-							max_n_past_obs = Inf, vb = FALSE)
 
-
-model_bsts_local <- stan_model(file = "./inst/stan/bsts_local_trend.stan")
-res_bsts_local <- fit_iteratively(incidences = y_south_korea, 
-								  model = model_bsts_local, 
-								  n_pred = 7, 
-								  max_n_past_obs = 7, vb = FALSE)
 
 
 # =======================================================
@@ -70,14 +83,22 @@ p_bsts_local
 
 plot_grid(p_reg, p_bsts, p_bsts_local, labels = "AUTO", ncol = 1)
 
+
+
+
+
 # =======================================================
 
+## do checks for a single time series
+
+bsts_stanfit
 
 
+prior <- SdPrior(sigma.guess = sdy,
+                       sample.size = .01,
+                       upper.limit = sigma.upper.limit)
 
-
-
-
+str(prior)
 # =======================================================
 # do checking of predictions
 

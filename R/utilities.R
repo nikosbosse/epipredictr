@@ -106,7 +106,9 @@ fit_iteratively <- function(incidences,
 							model = "bsts",
 							n_samples = 4000,
 							vb = FALSE,
+							fit_type = "stan",
 							length_local_trend = 7,
+							iter = 4000,
 							...) {
 	## track time
 	time <- Sys.time()
@@ -137,14 +139,21 @@ fit_iteratively <- function(incidences,
 			index <- index[current_earliest_obs:current_last_obs]
 		}
 		y <- incidences[index]
-
-		stanfit <- fit_stan_model(y, model, n_pred = n_pred, vb = vb, 
-							      length_local_trend = length_local_trend)
-
-		## store results
 		i <- i + 1
-		stanfitobjects[[i]] <- stanfit
-		predictive_samples[[i]] <- extract_samples(stanfit)
+
+		if (fit_type == "stan") {
+			stanfit <- fit_stan_model(y, model, n_pred = n_pred, vb = vb, 
+								      length_local_trend = length_local_trend, 
+								      iter = iter)
+
+			## store results
+			stanfitobjects[[i]] <- stanfit
+			predictive_samples[[i]] <- extract_samples(stanfit)
+		} else {
+			predictive_samples[[i]] <- bsts_wrapper(y, model, 
+									   num_pred  = n_pred)
+		}
+
 		forecast_run[[i]] <- rep(i, nrow(predictive_samples[[i]]))
 										 
 		current_last_obs <- current_last_obs + interval
@@ -167,17 +176,24 @@ fit_iteratively <- function(incidences,
 			index <- index[current_earliest_obs:total_n]
 		}
 	y <- incidences[index]
-
-	stanfit <- fit_stan_model(y, model, 
+	i <- i + 1
+	if (fit_type == "stan") {
+			stanfit <- fit_stan_model(y, model, 
 							  n_pred = n_pred, 
 							  vb = vb, 
+							  iter = iter,
 							  length_local_trend = length_local_trend)
-	i <- i + 1
-	stanfitobjects[[i]] <- stanfit
-	predictive_samples <- rbind(predictive_samples, 
-								extract_samples(stanfit))
-	forecast_run <- c(forecast_run, rep(i, n_pred))
 
+			stanfitobjects[[i]] <- stanfit
+			predictive_samples <- rbind(predictive_samples, 
+								     	extract_samples(stanfit))
+		} else {
+			predictive_samples <- rbind(predictive_samples,			
+										bsts_semilocal_linear_trend(y, 
+									   								num_pred  = n_pred))
+		}
+
+	forecast_run <- c(forecast_run, rep(i, n_pred))
 
     ## add NAs to the predictions and the true_values
     predictive_samples <- rbind(matrix(NA, nrow = start_period - 1, 
@@ -211,7 +227,9 @@ fit_iteratively <- function(incidences,
 #' NULL
 #' @export 
 
-fit_stan_model <-function(y, model, n_pred, vb, length_local_trend, ...) {
+fit_stan_model <-function(y, model, n_pred, vb, 
+						  iter = 4000,
+	                      length_local_trend, ...) {
 
 	if (class(model) == "character" && model == "lin_reg") {
 		stanfit <- epipredictr::linear_regression(y = y, 
@@ -232,7 +250,7 @@ fit_stan_model <-function(y, model, n_pred, vb, length_local_trend, ...) {
 					  length_local_trend = 5, num_pred = n_pred, 
 					  mean_phi = 1)
 			stanfit <- rstan::sampling(model, data = l, 
-                        	iter = 4000, warmup = 800, thin = 1, 
+                        	iter = iter, thin = 1, 
                         	control = list(adapt_delta = 0.99))
 		}
 }
@@ -371,4 +389,81 @@ plot_prior_vs_posterior <- function(stanfitobjects) {
 
 }
 
+#' @title Wrapper around the functions from the bsts package
+#'
+#' @description
+#' Missing. 
+#' Also Todo: handling for only one item 
+#' @param y 
+#' 
+#' @return
+#' Missing
+#' @examples
+#' NULL
+#' @export 
 
+bsts_wrapper <- function(y, model,
+						 num_pred = 7, 
+						 n_iter = 2000) {
+	if (model == "semilocal") {
+		ss <- AddSemilocalLinearTrend(list(), y)	
+	} else {
+		ss <- AddLocalLinearTrend(list(), y)	
+	}
+	bsts.model <- bsts::bsts(y, state.specification = ss, niter = 1000, ping=0)
+	burn <- SuggestBurn(0.1, bsts.model)
+	p <- predict.bsts(bsts.model, horizon = 7, burn = 100, quantiles = c(.025, .975))
+	return(t(p$distribution))
+}
+
+
+
+
+
+#' @title Wrapper to do all the fits that I have
+#'
+#' @description
+#' Missing. 
+#' Also Todo: handling for only one item 
+#' @param y 
+#' 
+#' @return
+#' Missing
+#' @examples
+#' NULL
+#' @export 
+
+do_all_fits <- function(y) {
+	res <- list()
+	stanfitlist <- list()
+
+	## lin_reg_stan
+	model_lin_reg <- stan_model(file = "./inst/stan/linear_regression.stan")
+	res$lin_reg_stan <- fit_iteratively(incidences = y, model = model_lin_reg, 
+						   n_pred = 7, iter = 5000,
+ 					       max_n_past_obs = 7, vb = FALSE)
+
+	 	
+	model_bsts <- stan_model(file = "./inst/stan/bsts.stan")
+	res$bsts_stan <- fit_iteratively(incidences = y, 
+							model = model_bsts, n_pred = 7, iter = 5000,
+							prior_var_phi = 0.8, mean_phi = 1,
+							max_n_past_obs = Inf, vb = FALSE)
+
+	model_bsts_local <- stan_model(file = "./inst/stan/bsts_local_trend.stan")
+	res$bsts_local_stan <- fit_iteratively(incidences = y, 
+								  model = model_bsts_local, 
+								  n_pred = 7, iter = 5000,
+								  max_n_past_obs = 7, vb = FALSE)
+	
+
+	res$bsts_local <- fit_iteratively(incidences = y, 
+					  model = "local", n_pred = 7,
+					  fit_type = "bsts_package")
+
+	res$bsts_semilocal <- fit_iteratively(incidences = y, 
+					  model = "semilocal", n_pred = 7,
+					  fit_type = "bsts_package")
+
+	return(res)
+}
