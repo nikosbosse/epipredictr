@@ -229,7 +229,8 @@ fit_stan_model <-function(y, model, n_pred, vb, length_local_trend, ...) {
 		} else {
 			l <- list(y = y, N = length(y), 
 					  n_pred = n_pred, prior_var_phi = 0.5, x = 1:length(y),
-					  length_local_trend = 3, num_pred = n_pred)
+					  length_local_trend = 5, num_pred = n_pred, 
+					  mean_phi = 1)
 			stanfit <- rstan::sampling(model, data = l, 
                         	iter = 4000, warmup = 800, thin = 1, 
                         	control = list(adapt_delta = 0.99))

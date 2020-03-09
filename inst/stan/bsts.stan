@@ -3,6 +3,7 @@ data {
   real y[N];
   int n_pred;
   real prior_var_phi;
+  real mean_phi;
 }
 
 transformed data{
@@ -34,7 +35,7 @@ model {
   }
   delta[1] ~ normal(D, sigma_eta);
   D ~ normal(0,1);
-  phi ~ normal(0.5, prior_var_phi);
+  phi ~ normal(mean_phi, prior_var_phi);
   sigma_eta ~ exponential(3); // random values I chose
   sigma_epsilon ~ exponential(3); // random values I chose
 }
@@ -54,7 +55,7 @@ generated quantities{
 
 
   // ========= prior samples ========== //
-  phi_prior = normal_rng(0, prior_var_phi);
+  phi_prior = normal_rng(mean_phi, prior_var_phi);
   sigma_eta_prior = exponential_rng(3); // random values I chose
   sigma_epsilon_prior = exponential_rng(3); // random values I chose
 

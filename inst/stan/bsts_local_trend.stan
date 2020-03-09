@@ -4,6 +4,7 @@ data {
   int n_pred;
   real prior_var_phi;
   int <lower=1> length_local_trend;
+  real mean_phi;
 }
 
 transformed data{
@@ -22,9 +23,9 @@ parameters{
   real <lower = 0> sigma_epsilon;
   real <lower = 0> sigma_eta;
   real <lower = -1, upper = 1> phi;
-  real delta[N];
-  real D[N];
-  real intercept[N];
+  vector[N] delta;
+  vector[N] D;
+  vector[N] intercept;
   real <lower = 0> sd_trend;
 
 }
@@ -41,17 +42,22 @@ model {
   }
   delta[1] ~ normal(D, sigma_eta);
   
-  for (s in 1:(length_local_trend - 1)) {
+/*  for (s in 1:(length_local_trend - 1)) {
     D[s] ~ normal(0,1);
     intercept[s] ~ normal(0,1);
-  }
+  }*/
+
+    D ~ normal(0,1);
+    intercept ~ normal(0,1);
 
   for (s in length_local_trend:N) {
     y[(s - length_local_trend + 1):s] ~ normal(intercept[s] + x * D[s], sd_trend);
   }
 
+  sd_trend ~ normal(0, 2);
+  intercept ~ normal(0, 3);
 
-  phi ~ normal(0, prior_var_phi);
+  phi ~ normal(mean_phi, prior_var_phi);
   sigma_eta ~ exponential(3); // random values I chose
   sigma_epsilon ~ exponential(3); // random values I chose
 }
@@ -71,7 +77,7 @@ generated quantities{
 
 
   // ========= prior samples ========== //
-  phi_prior = normal_rng(0, prior_var_phi);
+  phi_prior = normal_rng(mean_phi, prior_var_phi);
   sigma_eta_prior = exponential_rng(3); // random values I chose
   sigma_epsilon_prior = exponential_rng(3); // random values I chose
 

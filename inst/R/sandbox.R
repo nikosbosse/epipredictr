@@ -40,7 +40,7 @@ res_lin <- fit_iteratively(incidences = y_true, model = model_lin_reg,
 model_bsts <- stan_model(file = "./inst/stan/bsts.stan")
 res_bsts <- fit_iteratively(incidences = y_south_korea, 
 							model = model_bsts, n_pred = 7, 
-							prior_var_phi = 0.8, 
+							prior_var_phi = 0.8, mean_phi = 1,
 							max_n_past_obs = Inf, vb = FALSE)
 
 
@@ -68,12 +68,14 @@ p_bsts_local <- plot_pred_vs_true(y_pred_samples = res_bsts_local$predictive_sam
 						forecast_run = res_bsts_local$forecast_run)
 p_bsts_local
 
-
-
-
 plot_grid(p_reg, p_bsts, p_bsts_local, labels = "AUTO", ncol = 1)
 
 # =======================================================
+
+
+
+
+
 
 
 # =======================================================
@@ -89,8 +91,6 @@ plot_grid(p_reg, p_bsts, p_bsts_local, labels = "AUTO", ncol = 1)
 # =======================================================
 # plot prior vs. posterior 
 
-stanfit <- res_bsts$stanfitobjects[[1]]
-		
 prior_post <- plot_prior_vs_posterior(res_bsts$stanfitobjects)
 prior_post$plot
 
