@@ -119,6 +119,7 @@ fit_iteratively <- function(incidences,
 	n_runs <- ceiling((total_n - (start_period - 1)) / interval)
 
 	## initialize empty lists to hold the results
+
 	stanfitobjects <- list()
 	predictive_samples <- list()
 	forecast_run <-list()
@@ -280,7 +281,8 @@ fit_stan_model <-function(y, model, n_pred, vb,
 
 plot_pred_vs_true <- function(y_true, 
 							  y_pred_samples,
-							  forecast_run = NULL, 
+							  forecast_run,	
+							  vlines = T, 
 							  plottitle = "Pred vs. True"){
 	pred_mean <- rowMeans(y_pred_samples)
 	pred_median <- apply(y_pred_samples, median, MARGIN = 1)
@@ -299,14 +301,17 @@ plot_pred_vs_true <- function(y_true,
 	interval <- sum(forecast_run == 1, na.rm = TRUE)
 
 	## make vertical lines to display
-	x <- unique(forecast_run)
-	seq <- rep(NA, length(x) - 1)
-	for (i in 1:(length(x) - 1)) {
-		seq[i] <- which(forecast_run == x[i + 1] )[1] - 1
+	if (isTRUE(vlines)) {
+		x <- unique(forecast_run)
+		seq <- rep(NA, length(x) - 1)
+		for (i in 1:(length(x) - 1)) {
+			seq[i] <- which(forecast_run == x[i + 1] )[1] - 1
+		}
+		vlines <- rep(NA, nrow(df))
+		vlines[seq] <- seq
+	} else {
+		vlines <- 0
 	}
-	vlines <- rep(NA, nrow(df))
-	vlines[seq] <- seq
-
 
 	plot <- ggplot(df, aes(x = 1:nrow(df)), group = forecast_run) +
 			geom_ribbon(aes(ymin =ci2.5, ymax = ci97.5), alpha = 0.3, 
@@ -315,9 +320,12 @@ plot_pred_vs_true <- function(y_true,
 						fill = "lightblue") + 
 			geom_line(aes(y = median), color = "blue") +
 			geom_line(aes(y = true)) +
-			geom_vline(aes(xintercept = vlines)) +
 			ggtitle(plottitle) +
 			theme(text = element_text(family = 'Serif'))
+
+	if (isTRUE(vlines)) {
+		plot <- plot + geom_vline(aes(xintercept = vlines))
+	}
 	return(plot)
 }
 
@@ -426,70 +434,6 @@ bsts_wrapper <- function(y, model,
 }
 
 
-
-
-
-#' @title Wrapper to do all the fits that I have
-#'
-#' @description
-#' Missing. 
-#' Also Todo: handling for only one item 
-#' @param y 
-#' 
-#' @return
-#' Missing
-#' @examples
-#' NULL
-#' @export 
-
-forecast_one_country <- function(y, include_stan = FALSE, models = NULL) {
-	res <- list()
-	stanfitlist <- list()
-	scores <-list()
-
-	if (isTRUE(include_stan)) {
-		## lin_reg_stan
-		model_lin_reg <- models[[1]]
-		res$lin_reg_stan <- fit_iteratively(incidences = y, model = model_lin_reg, 
-							   n_pred = 7, iter = 5000,
-	 					       max_n_past_obs = 7, vb = FALSE)
-	 	
-		model_bsts <- models[[2]]
-		res$bsts_stan <- fit_iteratively(incidences = y, 
-								model = model_bsts, n_pred = 7, iter = 5000,
-								prior_var_phi = 0.8, mean_phi = 1,
-								max_n_past_obs = Inf, vb = FALSE)
-
-		model_bsts_local <- models[[3]]
-		res$bsts_local_stan <- fit_iteratively(incidences = y, 
-									  model = model_bsts_local, 
-									  n_pred = 7, iter = 5000,
-									  max_n_past_obs = 7, vb = FALSE)
-	}
-
-	res$bsts_local <- fit_iteratively(incidences = y, 
-					  model = "local", n_pred = 7,
-					  fit_type = "bsts_package")
-
-	res$bsts_semilocal <- fit_iteratively(incidences = y, 
-					  model = "semilocal", n_pred = 7,
-					  fit_type = "bsts_package")
-
-	res$bsts_local_student <- fit_iteratively(incidences = y, 
-					  model = "local_student", n_pred = 7,
-					  fit_type = "bsts_package")
-
-	res$bsts_ar1 <- fit_iteratively(incidences = y, 
-					  model = "ar1", n_pred = 7,
-					  fit_type = "bsts_package")
-
-	res$bsts_ar2 <- fit_iteratively(incidences = y, 
-					  model = "ar2", n_pred = 7,
-					  fit_type = "bsts_package")
-
-
-	return(res)
-}
 
 
 #' @title Wrapper to make a visual plot to compare the outputs of do_all_fits
@@ -672,90 +616,5 @@ forecast_table <- function(pred_result, country = "country") {
 
 
 
-#' @title Do entire analysis for one country
-#'
-#' @description
-#' Missing. 
-#' Also Todo: handling for only one item 
-#' @param y 
-#' 
-#' @return
-#' Missing
-#' @examples
-#' NULL
-#' @export 
-#' 
-
-analysis_one_country <- function(y, country = "country", plot = F) {
-	analysis <- list()
-	analysis$country <- country
-	analysis$forecast_res <- forecast_one_country(y, include_stan = F)
-	analysis$forecast_res <- add_average_model(analysis$forecast_res)
-	analysis$forecast_table <- compare_forecasts(analysis$forecast_res)
-	
-	if(isTRUE(plot)) compare_bsts_models(y)
-
-	analysis$forecast_plot <- plot_forecast_compare(analysis$forecast_res)
-	return(analysis)
-}
 
 
-
-
-#' @title Do the full analysis
-#'
-#' @description
-#' Missing. 
-#' Also Todo: handling for only one item 
-#' @param y 
-#' 
-#' @return
-#' Missing
-#' @examples
-#' NULL
-#' @export 
-
-full_analysis <- function(timeseries, countries) {
-	res <- lapply(seq_along(timeseries), 
-				  FUN = function(i) {				  	
-				  	return(analysis_one_country(timeseries[[i]], countries[i]))
-				  })
-
-	names(res) <- countries 
-
-	tables <- lapply(res, '[[', 3)
-	tables <- lapply(seq_along(tables), 
- 					 FUN = function(i) {
- 					 	cbind(country = countries[i], tables[[i]])
- 					 })
-	table <- do.call(rbind, tables)
-
-	lineplot <- ggplot(data = table, 
-		   aes(y = mean, color = (model), x = country, group = model)) +
-	  geom_point() +
-	  geom_line() +
-	  facet_wrap(~ method, ncol = 1, scales = "free_y") +
-	  theme(text = element_text(family = 'Serif'))
-
-	boxplot <- ggplot(data = table, 
-		   aes(y = mean, color = (model), x = country, group = model)) +
-	  geom_boxplot() +
-	  facet_wrap(~ method, ncol = 1, scales = "free_y") +
-	  theme(text = element_text(family = 'Serif'))	
-
-	table_mean <- aggregate(mean ~ method + model, df, mean)
-	table_mean <- table_mean[order(table_mean$method, table_mean$mean), ]	
-
-	table_mean <- aggregate(mean ~ method + model, df, mean)
-	table_median <- table_median[order(table_mean$method, table_mean$mean), ]	
-
-
-	out <- list(analysis_results = res, 
-				analysis_table = table, 
-				lineplot = lineplot, 
-				boxplot = boxplot. 
-				table_mean = table_mean, 
-				table_median = table_median)
-
-	return(out)
-}

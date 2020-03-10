@@ -12,18 +12,17 @@ par(family = "Serif")
 
 # inc <- epipredictr::get_data()
 # ts <- inc$daily
-# fit <- epipredictr::linear_regression(y = ts) 
+# fit <- epipredictr::linear_regression(y = ts)
 # p <- extract_samples(fit, predictive = F)
 # scoringutils::eval_forecasts(true_values = ts, predictions = p)
 # a <- fit_iteratively(ts)
 
 source("R/utilities.R")
-source("R/models.R")
-
+source("R/forecast.R")
 
 
 # ======================================================== #
-# 
+#
 # ======================================================== #
 
 sk <- readRDS("data/time_varying_params_south_korea.rds")[[1]]
@@ -37,77 +36,67 @@ sp <- readRDS("data/time_varying_params_singapore.rds")[[1]]
 # model_bsts_local_trend <- stan_model(file = "./inst/stan/bsts_local_trend.stan")
 # models <- list(model_lin_reg, model_bsts, model_bsts_local_trend, "local", "semilocal")
 
-y_sk <- sk$median
-y_jp <- jp$median
-y_sp <- sp$median
-y_it <- it$median
+y_sk <- sk$median[1:10]
+y_jp <- jp$median[1:10]
+y_sp <- sp$median[1:10]
+y_it <- it$median[1:10]
 timeseries <- list(y_sk, y_jp, y_sp, y_it)
 countries <- c("South_Korea", "Japan", "Singapore", "Italy")
+models <- c("local", "semilocal", "local_student", "ar1", "ar2")
 
-c <- analysis_one_country(y_sk, "South Korea", plot = T)
-c$forecast_plot
+timeseries <- list(y_sk, y_jp, y_sp, y_it)
+countries <- c("South_Korea", "Japan", "Singapore", "Italy")
+models <- c("local", "semilocal", "local_student", "ar1", "ar2")
 
-analysis <- full_analysis(timeseries, countries)
+data <- list(timeseries = timeseries,
+             countries = countries,
+             models = models,
+             n_pred = 7,
+             start_period = 8)
 
-(analysis$analysis_results$Japan$forecast_plot)
-
-
-
-
-
-df
-
-
+analysis <- full_analysis(data)
 
 
-aggregate(df$mean, list(df$method, df$model), mean)
+best <- as.character(a[1, colnames(a) == "model"])
+
+debugonce(full_analysis)
 
 
-tmp <- list()
-i = 1
-for (model in c("CRPS", "logs")) {
-	for (country in countries)
-		index <- df$country == country & df$method == method
-		tmp[[i]] <- mean(df[df])
-}
+analysis$
 
 
 
 
-compare_forecasts(analysis$analysis_results$Japan$forecast_res)
-
-
-cbind(analysis$analysis_table, country = countries, method = method)
 
 
 
-forecast_table(res_sk[[1]])
 
-y_sk <- sk$median
-res_sk <- forecast_one_country(y_sk, models, include_stan = F)
-res_sk <- add_average_model(res_sk)
-(plot_sk <- plot_forecast_compare(res_sk))
-compare_forecasts(res_sk2)
-compare_bsts_models(y_sk)
-ggsave("vignettes/figure/south_korea.png", plot_sk)
 
-y_jp <- jp$median
-res_jp <- do_all_fits(y_jp, models, include_stan = F)
-plot_jp <- plot_forecast_compare(res_jp)
-compare_forecasts(res_jp)
-ggsave("./vignettes/figure/japan.png", plot_jp)
+# y_sk <- sk$median
+# res_sk <- forecast_one_country(y_sk, models, include_stan = F)
+# res_sk <- add_average_model(res_sk)
+# (plot_sk <- plot_forecast_compare(res_sk))
+# compare_forecasts(res_sk2)
+# compare_bsts_models(y_sk)
+# ggsave("vignettes/figure/south_korea.png", plot_sk)
 
-y_sp <- sp$median
-res_sp <- do_all_fits(y_sp, models, include_stan = F)
-plot_sp <- plot_forecast_compare(res_sp)
-compare_forecasts(res_sp)
-ggsave("vignettes/figure/singapore.png", plot_sp)
+# y_jp <- jp$median
+# res_jp <- do_all_fits(y_jp, models, include_stan = F)
+# plot_jp <- plot_forecast_compare(res_jp)
+# compare_forecasts(res_jp)
+# ggsave("./vignettes/figure/japan.png", plot_jp)
 
-y_it <- it$median
-res_it <- do_all_fits(y_it, models, include_stan = F)
-plot_it <- plot_forecast_compare(res_it)
-compare_forecasts(res_it)
-ggsave("./vignettes/figure/italy.png", plot_it)
+# y_sp <- sp$median
+# res_sp <- do_all_fits(y_sp, models, include_stan = F)
+# plot_sp <- plot_forecast_compare(res_sp)
+# compare_forecasts(res_sp)
+# ggsave("vignettes/figure/singapore.png", plot_sp)
+
+# y_it <- it$median
+# res_it <- do_all_fits(y_it, models, include_stan = F)
+# plot_it <- plot_forecast_compare(res_it)
+# compare_forecasts(res_it)
+# ggsave("./vignettes/figure/italy.png", plot_it)
 
 
 
@@ -137,18 +126,18 @@ ggsave("./vignettes/figure/italy.png", plot_it)
 
 # =======================================================
 ## do plots
-p_reg <- plot_pred_vs_true(y_pred_samples = res_lin$predictive_samples, 
-						y_true = res_lin$y, 
+p_reg <- plot_pred_vs_true(y_pred_samples = res_lin$predictive_samples,
+						y_true = res_lin$y,
 						forecast_run = res_lin$forecast_run)
 
 
-p_bsts <- plot_pred_vs_true(y_pred_samples = res_bsts$predictive_samples, 
-						y_true = res_bsts$y, 
+p_bsts <- plot_pred_vs_true(y_pred_samples = res_bsts$predictive_samples,
+						y_true = res_bsts$y,
 						forecast_run = res_bsts$forecast_run)
 p_bsts
 
-p_bsts_local <- plot_pred_vs_true(y_pred_samples = res_bsts_local$predictive_samples, 
-						y_true = res_bsts_local$y, 
+p_bsts_local <- plot_pred_vs_true(y_pred_samples = res_bsts_local$predictive_samples,
+						y_true = res_bsts_local$y,
 						forecast_run = res_bsts_local$forecast_run)
 p_bsts_local
 
@@ -181,7 +170,7 @@ str(prior)
 
 
 # =======================================================
-# plot prior vs. posterior 
+# plot prior vs. posterior
 
 prior_post <- plot_prior_vs_posterior(res_bsts$stanfitobjects)
 prior_post$plot
@@ -238,9 +227,9 @@ n <- length(beta_mu)
 samples <- replicate(n = 2000, rgamma(n, shape = alpha_mu, rate = beta_mu))
 
 t <- nrow(samples)
-l <- list(N = t, 
-		  y = samples, 
-		  x = 1:t, 
+l <- list(N = t,
+		  y = samples,
+		  x = 1:t,
 		  n_samples = ncol(samples),
 		  num_pred = 1)
 
@@ -361,8 +350,8 @@ length(ts)
 
 
 
-my_pred_vs_true_inc_plot <- function(y_true, 
-									 y_pred, 
+my_pred_vs_true_inc_plot <- function(y_true,
+									 y_pred,
 									 vert_lines = NULL){
 	ymin <- min(c(y_true, y_pred))
 	ymax <- max(c(y_true, y_pred))
@@ -377,8 +366,8 @@ my_pred_vs_true_inc_plot <- function(y_true,
 
 
 
-vert_lines <- seq(from = interval, 
-			  	  to = n_total, 
+vert_lines <- seq(from = interval,
+			  	  to = n_total,
 				  by = interval)
 
 my_pred_vs_true_inc_plot(ts[15:86], rowMeans(a), vert_lines)

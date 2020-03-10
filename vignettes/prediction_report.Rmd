@@ -25,9 +25,10 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>", 
   echo = FALSE, eval = TRUE,
-  fig.width = 6, fig.height = 3,
+  #fig.width = 6, fig.height = 3,
   message = FALSE,
   warning = FALSE,
+  error = TRUE,
   dpi = 320,
   fig.path = "figure/"
 )
@@ -45,6 +46,7 @@ library(patchwork)
 library(bsts)
 par(family = "Serif")
 source("../R/utilities.R")
+source("../R/forecast.R")
 ```
 
 
@@ -60,15 +62,35 @@ y_sk <- sk$median
 y_jp <- jp$median
 y_sp <- sp$median
 y_it <- it$median
+
+y_sk <- sk$median[1:10]
+y_jp <- jp$median[1:10]
+y_sp <- sp$median[1:10]
+y_it <- it$median[1:10]
+
 ```
 
 ```{r do-analysis, include=FALSE}
 timeseries <- list(y_sk, y_jp, y_sp, y_it)
 countries <- c("South_Korea", "Japan", "Singapore", "Italy")
+models <- c("local", "semilocal", "local_student", "ar1", "ar2")
 
-analysis <- full_analysis(timeseries, countries)
+data <- list(timeseries = timeseries, 
+			 countries = countries, 
+			 models = models, 
+			 n_pred = 7,
+			 start_period = 8)
 
-analysis$analysis_table
+analysis <- full_analysis(data)
+
+summary_prediction_result <- rbind(
+forecast_table(analysis$country_results$Japan$forecast_res$average, "Japan"),
+forecast_table(analysis$country_results$South_Korea$forecast_res$average, "South Korea"),
+forecast_table(analysis$country_results$Singapore$forecast_res$average, "Singapore"),
+forecast_table(analysis$country_results$Italy$forecast_res$average, "Italy")
+)
+
+
 
 ```
 
@@ -82,15 +104,16 @@ Forecast the time-varying $R_t$ estimates into the future to get a sense of the 
 ## Key Results {.tabset}
 
 ### table
-test
+```{r Summary-results}
+knitr::kable(summary_prediction_result[,-1])
+```
 
 ### graph
-test graph
+```{r Summary-results-graph}
+patchwork::wrap_plots(analysis$predictions_best, ncol = 2)
 
--	[ ] graph with predictions by every country for best model
--	[ ] table with 
-		- CI for forecasts
-		- Past forecast score? 
+```
+
 
 ## Abstract
 
@@ -113,7 +136,27 @@ package.
 
 ### Limitations
 
-## Validity
+## Scoring {.tabset}
+
+### Boxplot
+```{r Scoring-boxplot}
+analysis$scoring$boxplot
+```
+
+### Lineplot
+```{r Scoring-lineplot}
+analysis$scoring$lineplot
+```
+
+### total scores
+```{r Scoring-total-scores}
+knitr::kable(analysis$scoring$across_country_scores)
+```
+
+### mean score across countries
+```{r Scoring-ranked-mean}
+knitr::kable(analysis$scoring$scores_ranked_mean)
+```
 
 ## Results by country {.tabset}
 
@@ -121,10 +164,46 @@ package.
 
 #### Prediction vs. Actual
 
-```{r South-Korea}
-analysis$analysis_results$Japan$forecast_plot
+```{r South-Korea, fig.width=10, fig.height=11}
+analysis$country_results$South_Korea$forecast_plot
 
 ```
 
 ### Prediction Scores
 
+
+### Japan {.tabset}
+
+#### Prediction vs. Actual
+
+```{r Japan, fig.width=10, fig.height=11}
+analysis$country_results$Japan$forecast_plot
+
+```
+
+### Prediction Scores
+
+
+### Singapore {.tabset}
+
+#### Prediction vs. Actual
+
+```{r Singapore, fig.width=10, fig.height=11}
+analysis$country_results$Singapore$forecast_plot
+
+```
+
+### Prediction Scores
+
+
+
+### Italy {.tabset}
+
+#### Prediction vs. Actual
+
+```{r Italy, fig.width=10, fig.height=11}
+analysis$country_results$Italy$forecast_plot
+
+```
+
+### Prediction Scores
