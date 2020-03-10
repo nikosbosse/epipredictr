@@ -72,6 +72,7 @@ y_it <- it$median[1:10]
 
 ```{r do-analysis, include=FALSE}
 timeseries <- list(y_sk, y_jp, y_sp, y_it)
+dates <- lapply(timeseries, FUN = function(i) {1:length(timeseries[i])})
 countries <- c("South_Korea", "Japan", "Singapore", "Italy")
 models <- c("local", "semilocal", "local_student", "ar1", "ar2")
 
@@ -79,7 +80,8 @@ data <- list(timeseries = timeseries,
 			 countries = countries, 
 			 models = models, 
 			 n_pred = 7,
-			 start_period = 8)
+			 start_period = 8, 
+			 dates = dates)
 
 analysis <- full_analysis(data)
 
@@ -95,7 +97,6 @@ forecast_table(analysis$country_results$Italy$forecast_res$average, "Italy")
 ```
 
 
-
 # Summary {.tabset}
 
 ### Aim
@@ -103,15 +104,16 @@ Forecast the time-varying $R_t$ estimates into the future to get a sense of the 
 
 ## Key Results {.tabset}
 
-### table
-```{r Summary-results}
-knitr::kable(summary_prediction_result[,-1])
-```
 
 ### graph
 ```{r Summary-results-graph}
 patchwork::wrap_plots(analysis$predictions_best, ncol = 2)
 
+```
+
+### table
+```{r Summary-results}
+knitr::kable(summary_prediction_result[,-1])
 ```
 
 
