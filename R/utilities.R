@@ -442,7 +442,7 @@ bsts_wrapper <- function(y, model,
 #' NULL
 #' @export 
 
-do_all_fits <- function(y, include_stan = FALSE, models = NULL) {
+forecast_one_country <- function(y, include_stan = FALSE, models = NULL) {
 	res <- list()
 	stanfitlist <- list()
 	scores <-list()
@@ -627,4 +627,94 @@ add_average_model <- function(pred_results) {
 	pred_results$average$y <- pred_results[[1]]$y
 	pred_results$average$forecast_run <- pred_results[[1]]$forecast_run
 	return(pred_results)
+}
+
+#' @title Extract summary data.frame from forecasts
+#'
+#' @description
+#' Missing. 
+#' Also Todo: handling for only one item 
+#' @param y 
+#' 
+#' @return
+#' Missing
+#' @examples
+#' NULL
+#' @export 
+
+forecast_table <- function(pred_result, country = "country") {
+	pred <- pred_result$predictive_samples[is.na(pred_result$y), ]
+
+	median_3 <- median(pred[3, ])
+	mean_3 <- median(pred[3, ])
+	quantiles_3 <- quantile(pred[3, ], c(0.025, 0.25, 0.75, 0.975))	
+
+	df <- data.frame(country = country, 
+					 median_3 = median_3, 
+					 mean_3 = mean_3, 
+					 "quantile_2.5" = quantiles_3[1], 
+					 "quantile_25" = quantiles_3[2], 
+					 "quantile_75" = quantiles_3[3],
+					 "quantile_97.5" = quantiles_3[4])
+	rownames(df) <- country
+	return(df)
+}
+
+
+#' @title Do the full analysis
+#'
+#' @description
+#' Missing. 
+#' Also Todo: handling for only one item 
+#' @param y 
+#' 
+#' @return
+#' Missing
+#' @examples
+#' NULL
+#' @export 
+
+full_analysis <- function(timeseries, countries) {
+	res <- lapply(seq_along(timeseries), 
+				  FUN = function(i) {				  	
+				  	return(analysis_one_country(timeseries[[i]], countries[i]))
+				  })
+
+	names(res) <- countries 
+
+	tables <- lapply(res, '[[', 3)
+	table <- do.call(rbind, tables)
+
+	out <- list(analysis_results = res, 
+				analysis_table = table)
+
+	return(out)
+}
+
+
+#' @title Do entire analysis for one country
+#'
+#' @description
+#' Missing. 
+#' Also Todo: handling for only one item 
+#' @param y 
+#' 
+#' @return
+#' Missing
+#' @examples
+#' NULL
+#' @export 
+#' 
+
+analysis_one_country <- function(y, country = "country", plot = F) {
+	analysis <- list()
+	analysis$country <- country
+	analysis$forecast_res <- forecast_one_country(y, include_stan = F)
+	analysis$forecast_res <- add_average_model(analysis$forecast_res)
+	analysis$forecast_table <- compare_forecasts(analysis$forecast_res)
+	
+	if(isTRUE(plot)) compare_bsts_models(y)
+
+	analysis$forecast_plot <- plot_forecast_compare(analysis$forecast_res)
+	return(analysis)
 }

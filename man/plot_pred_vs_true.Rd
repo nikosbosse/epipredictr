@@ -4,7 +4,8 @@
 \alias{plot_pred_vs_true}
 \title{Plot predictive samples vs. true values}
 \usage{
-plot_pred_vs_true(y_true, y_pred_samples, forecast_run = NULL)
+plot_pred_vs_true(y_true, y_pred_samples, forecast_run = NULL,
+  plottitle = "Pred vs. True")
 }
 \arguments{
 \item{y_true}{Vector of length n with the true values

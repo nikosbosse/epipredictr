@@ -4,7 +4,8 @@
 \alias{fit_stan_model}
 \title{Fit Stan model}
 \usage{
-fit_stan_model(y, model, n_pred, vb, length_local_trend, ...)
+fit_stan_model(y, model, n_pred, vb, iter = 4000, length_local_trend,
+  ...)
 }
 \arguments{
 \item{y}{Vector of length n with the true values

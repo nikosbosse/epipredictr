@@ -17,6 +17,33 @@ vignette: >
 
 *Note: this is preliminary analysis, has not yet been peer-reviewed and is updated daily as new data becomes available. This work is licensed under a [Creative Commons Attribution 4.0 International License](https://creativecommons.org/licenses/by/4.0/). A summary of this report can be downloaded [here](https://cmmid.github.io/topics/covid19/current-patterns-transmission/reports/global-time-varying-transmission/summary.pdf)*
 
+
+
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r load-packages, include=FALSE}
+library(epipredictr)
+```
+
+
+```{r load-data, include=FALSE}
+
+
+```
+
+```{r do-analysis, include=FALSE}
+
+
+```
+
+
+
 # Summary
 ## Aim
 Forecast the time-varying $R_t$ estimates into the future to get a sense of the trajectory of the COVID-19 epidemic in different countries. 
@@ -29,8 +56,11 @@ We used three different models
 1. windowed regression
 2. BSTS with a global trend
 3. BSTS with a local trend
+4. BSTS with an AR 1
 
-to forecast transmission rates. Predictions were made using R and Stan and results were scored using CRPS and LogS using the scoringRules package. 
+to forecast transmission rates. Predictions were made using R and Stan and the 
+bsts package and results were scored using CRPS and LogS using the scoringRules 
+package. 
 
 ## Key Results {.tabset}
 
@@ -47,27 +77,19 @@ test graph
 
 
 
-# Details
+# Details 
+# Methods {.tabset}
+## Limitations
 
-```{r setup, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>"
-)
-```
+# Results by country {.tabset}
 
-```{r load-packages, include=FALSE}
-library(epipredictr)
-```
+## South Korea
 
 
 
-```{r load-data, include=FALSE}
-getwd()
-# d <- readRDS("./data/time_varying_params.rds")[[1]]
-# y_true <- d$mean
 
-```
+
+
 
 ```{r}
 getwd()
@@ -76,41 +98,3 @@ plot(1:10)
 
 ```
 
-
-```{r eval=FALSE, echo = FALSE, results="hide", message = FALSE, warning = FALSE}
-## Windowed Regression 
-# model_lin_reg <- stan_model(file = "./inst/stan/linear_regression.stan")
-# res_lin <- fit_iteratively(incidences = y_true, model = model_lin_reg, 
-# 						   n_pred = 7, 
-#  					       max_n_past_obs = 7, vb = FALSE)
-
-res_lin <- fit_iteratively(incidences = y_true, model = "lin_reg", n_pred = 7,	   				     max_n_past_obs = 7, vb = FALSE)
-
-
-
-## BSTS global trend
-# model_bsts <- stan_model(file = "./inst/stan/bsts.stan")
-# res_bsts <- fit_iteratively(incidences = y_true, 
-# 							model = model_bsts, n_pred = 7, 
-# 							max_n_past_obs = Inf, vb = FALSE)
-res_bsts <- fit_iteratively(incidences = y_true, 
-							model = "bsts", n_pred = 7, 
-							max_n_past_obs = Inf, vb = FALSE)
-
-
-
-## BSTS local trend
-# model_bsts_local <- stan_model(file = "./inst/stan/bsts_local_trend.stan")
-# res_bsts_local <- fit_iteratively(incidences = y_true, 
-# 								  model = model_bsts_local, 
-# 								  n_pred = 7, 
-# 								  max_n_past_obs = Inf, vb = FALSE)
-
-res_bsts_local <- fit_iteratively(incidences = y_true, 
-							model = "bsts_local_trend", n_pred = 7, 
-							max_n_past_obs = Inf, vb = FALSE, 
-							length_local_trend = 7)
-
-
-
-```

@@ -32,20 +32,34 @@ it <- readRDS("data/time_varying_params_italy.rds")[[1]]
 jp <- readRDS("data/time_varying_params_japan.rds")[[1]]
 sp <- readRDS("data/time_varying_params_singapore.rds")[[1]]
 
-model_lin_reg <- stan_model(file = "./inst/stan/linear_regression.stan")
-model_bsts <- stan_model(file = "./inst/stan/bsts.stan")
-model_bsts_local_trend <- stan_model(file = "./inst/stan/bsts_local_trend.stan")
-models <- list(model_lin_reg, model_bsts, model_bsts_local_trend, "local", "semilocal")
-
-
+# model_lin_reg <- stan_model(file = "./inst/stan/linear_regression.stan")
+# model_bsts <- stan_model(file = "./inst/stan/bsts.stan")
+# model_bsts_local_trend <- stan_model(file = "./inst/stan/bsts_local_trend.stan")
+# models <- list(model_lin_reg, model_bsts, model_bsts_local_trend, "local", "semilocal")
 
 y_sk <- sk$median
-res_sk <- do_all_fits(y_sk, models, include_stan = F)
+y_jp <- jp$median
+y_sp <- sp$median
+y_it <- it$median
+timeseries <- list(y_sk, y_jp, y_sp, y_it)
+countries <- c("South Korea", "Japan", "Singapore", "Italy")
+
+analysis <- full_analysis(timeseries, countries)
+
+names(analysis$analysis_results)
+analysis$analysis_table
+
+
+forecast_table(res_sk[[1]])
+
+y_sk <- sk$median
+res_sk <- forecast_one_country(y_sk, models, include_stan = F)
 res_sk <- add_average_model(res_sk)
 (plot_sk <- plot_forecast_compare(res_sk))
 compare_forecasts(res_sk2)
 compare_bsts_models(y_sk)
 ggsave("vignettes/figure/south_korea.png", plot_sk)
+
 
 y_jp <- jp$median
 res_jp <- do_all_fits(y_jp, models, include_stan = F)
