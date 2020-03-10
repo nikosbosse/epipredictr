@@ -42,12 +42,43 @@ y_jp <- jp$median
 y_sp <- sp$median
 y_it <- it$median
 timeseries <- list(y_sk, y_jp, y_sp, y_it)
-countries <- c("South Korea", "Japan", "Singapore", "Italy")
+countries <- c("South_Korea", "Japan", "Singapore", "Italy")
+
+c <- analysis_one_country(y_sk, "South Korea", plot = T)
+c$forecast_plot
 
 analysis <- full_analysis(timeseries, countries)
 
-names(analysis$analysis_results)
-analysis$analysis_table
+(analysis$analysis_results$Japan$forecast_plot)
+
+
+
+
+
+df
+
+
+
+
+aggregate(df$mean, list(df$method, df$model), mean)
+
+
+tmp <- list()
+i = 1
+for (model in c("CRPS", "logs")) {
+	for (country in countries)
+		index <- df$country == country & df$method == method
+		tmp[[i]] <- mean(df[df])
+}
+
+
+
+
+compare_forecasts(analysis$analysis_results$Japan$forecast_res)
+
+
+cbind(analysis$analysis_table, country = countries, method = method)
+
 
 
 forecast_table(res_sk[[1]])
@@ -59,7 +90,6 @@ res_sk <- add_average_model(res_sk)
 compare_forecasts(res_sk2)
 compare_bsts_models(y_sk)
 ggsave("vignettes/figure/south_korea.png", plot_sk)
-
 
 y_jp <- jp$median
 res_jp <- do_all_fits(y_jp, models, include_stan = F)

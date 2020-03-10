@@ -23,30 +23,74 @@ vignette: >
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>", 
+  echo = FALSE, eval = TRUE,
+  fig.width = 6, fig.height = 3,
+  message = FALSE,
+  warning = FALSE,
+  dpi = 320,
+  fig.path = "figure/"
 )
 ```
 
 ```{r load-packages, include=FALSE}
 library(epipredictr)
+library(rstan)
+options(mc.cores = 4)
+rstan_options(auto_write = TRUE)
+library(scoringutils)
+library(dplyr)
+library(cowplot)
+library(patchwork)
+library(bsts)
+par(family = "Serif")
+source("../R/utilities.R")
 ```
 
 
 ```{r load-data, include=FALSE}
 
+sk <- readRDS("../data/time_varying_params_south_korea.rds")[[1]]
+it <- readRDS("../data/time_varying_params_italy.rds")[[1]]
+# uk <- readRDS("data/time_varying_params_uk.rds")[[1]]
+jp <- readRDS("../data/time_varying_params_japan.rds")[[1]]
+sp <- readRDS("../data/time_varying_params_singapore.rds")[[1]]
 
+y_sk <- sk$median
+y_jp <- jp$median
+y_sp <- sp$median
+y_it <- it$median
 ```
 
 ```{r do-analysis, include=FALSE}
+timeseries <- list(y_sk, y_jp, y_sp, y_it)
+countries <- c("South_Korea", "Japan", "Singapore", "Italy")
 
+analysis <- full_analysis(timeseries, countries)
+
+analysis$analysis_table
 
 ```
 
 
 
-# Summary
-## Aim
+# Summary {.tabset}
+
+### Aim
 Forecast the time-varying $R_t$ estimates into the future to get a sense of the trajectory of the COVID-19 epidemic in different countries. 
+
+## Key Results {.tabset}
+
+### table
+test
+
+### graph
+test graph
+
+-	[ ] graph with predictions by every country for best model
+-	[ ] table with 
+		- CI for forecasts
+		- Past forecast score? 
 
 ## Abstract
 
@@ -62,39 +106,25 @@ to forecast transmission rates. Predictions were made using R and Stan and the
 bsts package and results were scored using CRPS and LogS using the scoringRules 
 package. 
 
-## Key Results {.tabset}
 
-### table
-test
+# Details {.tabset}
 
-### graph
-test graph
+## Methods {.tabset}
 
--	[ ] graph with predictions by every country for best model
--	[ ] table with 
-		- CI for forecasts
-		- Past forecast score? 
+### Limitations
 
+## Validity
 
+## Results by country {.tabset}
 
-# Details 
-# Methods {.tabset}
-## Limitations
+### South Korea {.tabset}
 
-# Results by country {.tabset}
+#### Prediction vs. Actual
 
-## South Korea
-
-
-
-
-
-
-
-```{r}
-getwd()
-plot(1:10)
-
+```{r South-Korea}
+analysis$analysis_results$Japan$forecast_plot
 
 ```
+
+### Prediction Scores
 

@@ -560,6 +560,16 @@ compare_forecasts <- function (pred_results) {
 	scores <- do.call(rbind, scores)
 	scores <- scores[order(scores$mean, scores$model), ]
 
+	rn <- rownames(scores)
+
+	# countries <- gsub("\\..*","",rn)
+
+	method <- gsub(".*\\.","",rn)
+	method <- gsub('[[:digit:]]+', '', method)
+
+	scores <- cbind(method = method, scores)
+
+
 	return(scores)
 }
 
@@ -661,36 +671,6 @@ forecast_table <- function(pred_result, country = "country") {
 }
 
 
-#' @title Do the full analysis
-#'
-#' @description
-#' Missing. 
-#' Also Todo: handling for only one item 
-#' @param y 
-#' 
-#' @return
-#' Missing
-#' @examples
-#' NULL
-#' @export 
-
-full_analysis <- function(timeseries, countries) {
-	res <- lapply(seq_along(timeseries), 
-				  FUN = function(i) {				  	
-				  	return(analysis_one_country(timeseries[[i]], countries[i]))
-				  })
-
-	names(res) <- countries 
-
-	tables <- lapply(res, '[[', 3)
-	table <- do.call(rbind, tables)
-
-	out <- list(analysis_results = res, 
-				analysis_table = table)
-
-	return(out)
-}
-
 
 #' @title Do entire analysis for one country
 #'
@@ -717,4 +697,65 @@ analysis_one_country <- function(y, country = "country", plot = F) {
 
 	analysis$forecast_plot <- plot_forecast_compare(analysis$forecast_res)
 	return(analysis)
+}
+
+
+
+
+#' @title Do the full analysis
+#'
+#' @description
+#' Missing. 
+#' Also Todo: handling for only one item 
+#' @param y 
+#' 
+#' @return
+#' Missing
+#' @examples
+#' NULL
+#' @export 
+
+full_analysis <- function(timeseries, countries) {
+	res <- lapply(seq_along(timeseries), 
+				  FUN = function(i) {				  	
+				  	return(analysis_one_country(timeseries[[i]], countries[i]))
+				  })
+
+	names(res) <- countries 
+
+	tables <- lapply(res, '[[', 3)
+	tables <- lapply(seq_along(tables), 
+ 					 FUN = function(i) {
+ 					 	cbind(country = countries[i], tables[[i]])
+ 					 })
+	table <- do.call(rbind, tables)
+
+	lineplot <- ggplot(data = table, 
+		   aes(y = mean, color = (model), x = country, group = model)) +
+	  geom_point() +
+	  geom_line() +
+	  facet_wrap(~ method, ncol = 1, scales = "free_y") +
+	  theme(text = element_text(family = 'Serif'))
+
+	boxplot <- ggplot(data = table, 
+		   aes(y = mean, color = (model), x = country, group = model)) +
+	  geom_boxplot() +
+	  facet_wrap(~ method, ncol = 1, scales = "free_y") +
+	  theme(text = element_text(family = 'Serif'))	
+
+	table_mean <- aggregate(mean ~ method + model, df, mean)
+	table_mean <- table_mean[order(table_mean$method, table_mean$mean), ]	
+
+	table_mean <- aggregate(mean ~ method + model, df, mean)
+	table_median <- table_median[order(table_mean$method, table_mean$mean), ]	
+
+
+	out <- list(analysis_results = res, 
+				analysis_table = table, 
+				lineplot = lineplot, 
+				boxplot = boxplot. 
+				table_mean = table_mean, 
+				table_median = table_median)
+
+	return(out)
 }
