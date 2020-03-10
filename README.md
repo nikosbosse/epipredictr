@@ -1,17 +1,27 @@
 # Epipredictr Workplan 
 
-## Models and Model Fit
-  - [x] linear regression 
-  - [x] bsts, global trend
-  - [x] bsts local trend
+## To do
+- [ ] Make model fit iteratively in the right way
+- [ ] Write Text
+- [ ] Do model averaging
+- [ ] Reread Scoring rules
+
+## BSTS Models
+  - [x] Local 
+  - [x] Local With Student Distribution
+  - [x] Semilocal
+  - [x] AR1
+  - [x] AR2
+  - [ ] STAN models? other models?
+  - [ ] Model Stacking / Averaging
     
 ## Graphical Model Assessment
   - [x] plot with predictions against true values
-  - [ ] priors vs posterior plots
+  - [x] Plots of scoring across countries
   
 ## Analytical Model Assessment and Scoring Rules
-  - [ ] CRPS (use scoringRules package, should be straight-forward
-  - [ ] Maybe LogS. Less straight forward and probably inferior, but also implemented in scoringRules
+  - [x] CRPS (use scoringRules package, should be straight-forward
+  - [x] Maybe LogS. Less straight forward and probably inferior, but also implemented in scoringRules
   
   
 Popular examples of proper scoring rules for Ω = R include the logarithmic score and the continuous ranked probability score. The logarithmic score (LogS;Good 1952) is defined as LogS(F, y) = −log(f(y)),
