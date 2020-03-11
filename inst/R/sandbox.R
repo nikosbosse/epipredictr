@@ -25,44 +25,233 @@ source("R/forecast.R")
 #
 # ======================================================== #
 
-sk <- readRDS("data/time_varying_params_south_korea.rds")[[1]]
-it <- readRDS("data/time_varying_params_italy.rds")[[1]]
-# uk <- readRDS("data/time_varying_params_uk.rds")[[1]]
-jp <- readRDS("data/time_varying_params_japan.rds")[[1]]
-sp <- readRDS("data/time_varying_params_singapore.rds")[[1]]
 
-# model_lin_reg <- stan_model(file = "./inst/stan/linear_regression.stan")
-# model_bsts <- stan_model(file = "./inst/stan/bsts.stan")
-# model_bsts_local_trend <- stan_model(file = "./inst/stan/bsts_local_trend.stan")
-# models <- list(model_lin_reg, model_bsts, model_bsts_local_trend, "local", "semilocal")
+# sk <- readRDS("data/time_varying_params_south_korea.rds")[[1]]
+# it <- readRDS("data/time_varying_params_italy.rds")[[1]]
+# # uk <- readRDS("data/time_varying_params_uk.rds")[[1]]
+# jp <- readRDS("data/time_varying_params_japan.rds")[[1]]
+# sp <- readRDS("data/time_varying_params_singapore.rds")[[1]]
 
-y_sk <- sk$median[1:10]
-y_jp <- jp$median[1:10]
-y_sp <- sp$median[1:10]
-y_it <- it$median[1:10]
-timeseries <- list(y_sk, y_jp, y_sp, y_it)
-countries <- c("South_Korea", "Japan", "Singapore", "Italy")
+# y_sk <- sk$median[1:10]
+# y_jp <- jp$median[1:10]
+# y_sp <- sp$median[1:10]
+# y_it <- it$median[1:10]
+# timeseries <- list(y_sk, y_jp, y_sp, y_it)
+# countries <- c("South_Korea", "Japan", "Singapore", "Italy")
 models <- c("local", "semilocal", "local_student", "ar1", "ar2")
 
-timeseries <- list(y_sk, y_jp, y_sp, y_it)
-countries <- c("South_Korea", "Japan", "Singapore", "Italy")
-models <- c("local", "semilocal", "local_student", "ar1", "ar2")
+# timeseries <- list(y_sk, y_jp, y_sp, y_it)
+# countries <- c("South_Korea", "Japan", "Singapore", "Italy")
+# models <- c("local", "semilocal", "local_student", "ar1", "ar2")
 
-data <- list(timeseries = timeseries,
-             countries = countries,
+inputdata <- load_all_timeseries(date = as.Date("2020-03-09"))
+inputdata <- inputdata[1:17, ]
+
+data <- list(inputdata = inputdata, 
              models = models,
              n_pred = 7,
-             start_period = 8)
+             start_period = 4)
 
 analysis <- full_analysis(data)
 
 
-best <- as.character(a[1, colnames(a) == "model"])
-
-debugonce(full_analysis)
 
 
-analysis$
+
+
+
+
+
+
+
+
+a <- list.files("data/Rt_estimates/austria")
+
+max(as.Date(a))
+
+
+results_dir <- "data/Rt_estimates/"
+
+
+
+	for (region in regions) {
+		file_dir <- paste(results_dir, region, sep = "")
+
+
+
+df <- load_all_timeseries(base_dir = "data/Rt_estimates", regions = regions, 
+						  date = as.Date("2020-03-09"))
+
+regions <- df$region
+
+
+load_single_timeseries("data/Rt_estimates/", region, date)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## work on the analysis fit function
+analysis_one_country <- function(y, country = "country",
+								 data, plot = F) {
+	analysis <- list()
+	analysis$country <- country
+
+	models <- data$models
+
+	res <- list()
+
+	# per country: 
+	# 	per model:
+	# 		predictive_samples
+	# 		stanfitobjects
+	# 		forecast_run
+	# 		y
+
+	# per country
+	# 	predictive_samples + modelvar
+	# 	forecast_run
+	# 	y
+	# 	per model:
+	# 		stanfitobjects
+
+	i <- 1
+	current_last_obs <- data$start_period - 1
+
+	while (current_last_obs < total_n){
+		## determine current indices and make data
+		index <- 1:current_last_obs
+		if (length(index) > max_n_past_obs) {
+			current_earliest_obs <- length(index) - max_n_past_obs + 1
+			index <- index[current_earliest_obs:current_last_obs]
+		}
+		current_y <- y[index]
+
+		## get all predictive samples
+		for (model in models) {
+			if grepl("_stan", model) {
+				## pseudocode, not yet implemented
+				tmp <- <- predict_with_model(y = y, model, num_pred = num_pred)
+				res[[model]][[i]]$stanfitobject <- tmp$stanfitobject
+				res[[model]][[i]]$predictive_samples <- tmp$predictive_samples
+
+			} else {
+				tmp <- predict_with_model(y = y, model, num_pred = num_pred)
+				res[[model]][[i]] <- cbindtmp
+			}
+			
+		}
+
+fit_all_models <- function(){
+	
+	stanfitobjects <- NULL
+
+predict_with_model <- function(y, model, num_pred, stan = F) {
+
+	if (isTRUE(stan)) {
+
+	} else {
+		return(bsts_wrapper(y, model, num_pred = num_pred))
+	}
+}		
+
+
+	return(list(predictive_samples = predictive_samples, 
+		   		stanfitobjects = stanfitobjects, 
+		   		forecast_run = forecast_run))
+}
+
+
+
+
+
+
+	# 	i <- i + 1
+
+	# 	if (fit_type == "stan") {
+	# 		stanfit <- fit_stan_model(y, model, n_pred = n_pred, vb = vb,
+	# 							      length_local_trend = length_local_trend,
+	# 							      iter = iter)
+
+	# 		## store results
+	# 		stanfitobjects[[i]] <- stanfit
+	# 		predictive_samples[[i]] <- extract_samples(stanfit)
+	# 	} else {
+	# 		predictive_samples[[i]] <- bsts_wrapper(y, model,
+	# 								   num_pred  = n_pred)
+	# 	}
+
+	# 	forecast_run[[i]] <- rep(i, nrow(predictive_samples[[i]]))
+
+	# 	current_last_obs <- current_last_obs + interval
+	# }
+
+
+
+	## do forecasting
+	analysis$forecast_res <- forecast_one_country(y, include_stan = F)
+	analysis$forecast_res <- add_average_model(analysis$forecast_res)
+
+
+	## do scoring
+	analysis$scoring_table <- compare_forecasts(analysis$forecast_res)
+
+	if(isTRUE(plot)) {
+		compare_bsts_models(y)
+	}
+
+	analysis$forecast_plot <- plot_forecast_compare(analysis$forecast_res)
+	return(analysis)
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

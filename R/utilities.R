@@ -28,6 +28,80 @@ get_data <- function() {
 
 
 
+#' @title Load Sam's R_t timeseries
+#'
+#' @description
+#'
+#' @return
+#' a data.frame with the data
+#'
+#' @examples
+#' NULL
+#' @export 
+#' @references
+#' NULL
+
+
+load_all_timeseries <- function(base_dir = NULL, date = NULL) {
+
+	if (is.null(base_dir)) {
+		base_dir <- "data/Rt_estimates"
+	}
+
+	regions <- list.files(base_dir)
+
+	dfs <- lapply(seq_along(regions), 
+				  FUN = function(i) {
+				  	tryCatch(
+				  	{ load_single_timeseries(base_dir, 
+				  							   regions[i], 
+				  							   date)
+				  	}, 
+				  	error=function(cond) {return(NULL)}
+				  	)
+				  })
+	dfs <- do.call(rbind, dfs)
+	return(dfs)
+}
+
+
+
+#' @title Load Sam's R_t timeseries for a single region
+#'
+#' @description
+#'
+#' @return
+#' a data.frame with the data
+#'
+#' @examples
+#' NULL
+#' @export 
+#' @references
+#' NULL
+
+load_single_timeseries <- function(base_dir, region, date = NULL) {
+
+	if (is.null(date)) {
+		## find latest date
+		date <-  as.Date(list.files(file_dir))
+		date <- max(date)
+	}
+	
+	file_dir <- file.path(base_dir, region, date)
+
+	file_path <- file.path(file_dir, "time_varying_params.rds")
+
+	try
+	df <- readRDS(file_path)[[1]]
+	df <- df[, colnames(df) %in% c("date", "median")]
+	df <- cbind(df, region = region)
+	return(df)
+
+}
+
+
+
+
 #' @title Extract Predictive Samples From Stanobject
 #'
 #' @description
@@ -210,6 +284,32 @@ fit_iteratively <- function(incidences,
 		    	y = y)) 
 
 }
+
+
+
+#' @title Fit model
+#'
+#' @description
+#' Wrapper around different lower level fit functions
+#' @param y Vector of length n with the true values
+#' fit the model and make predictions. 
+#' @param model Missing
+#' 
+#' @return
+#' Missing
+#' @examples
+#' NULL
+#' @export 
+
+predict_with_model <- function(y, model, num_pred, stan = F) {
+
+	if (isTRUE(stan)) {
+
+	} else {
+		return(bsts_wrapper(y, model, num_pred = num_pred))
+	}
+}
+
 
 
 

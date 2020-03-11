@@ -13,19 +13,40 @@
 
 full_analysis <- function(data) {
 
-	timeseries <- data$timeseries
-	countries <- data$countries
+	inputdata <- data$inputdata
+#	timeseries <- data$timeseries
+	countries <- as.character(unique(inputdata$region))
 	models <- data$models
+
 
 	# analysis by country ============================================= #
 	## collect results country-wise
-	res <- lapply(seq_along(timeseries),
+	res <- lapply(seq_along(countries),
 				  FUN = function(i) {
-				  	return(analysis_one_country(y = timeseries[[i]],
-				  								country = countries[i],
-				  								data = data))
+				  	out <- tryCatch(
+				  		{
+				  			analysis_one_country(country = countries[i],
+				  								data = data)
+				  		}, 
+				  		error = function(cond) {
+				  			warning(cond)
+				  			warning(paste("Issue with region", countries[i]))
+				  			return(NULL)
+
+				  		}
+				  	)
+				  	return(out)
 				  })
+
+	failure <- lapply(res, is.null)
+	failure <- do.call(c, failure)
+
+	res <- res[!failure]
+	countries <- countries[!failure]
 	names(res) <- countries
+
+	
+
 	## ================================================================ #
 
 	## scoring ================================================== #
@@ -96,7 +117,7 @@ full_analysis <- function(data) {
 
 
 	out <- list(countries = countries,
-				timeseries = timeseries,
+				inputdata = inputdata,
 				country_results = res,
 				scoring = scoring,
 				predictions_best = predictions_best)
@@ -125,65 +146,17 @@ full_analysis <- function(data) {
 #' @export
 #'
 
-analysis_one_country <- function(y, country = "country",
-								 data, plot = F) {
+analysis_one_country <- function(data, country = "country", plot = F) {
+	
 	analysis <- list()
+	inputdata <- data$inputdata
+	y <- inputdata[inputdata$region == country, 
+				   colnames(inputdata) == "median"]
 	analysis$country <- country
-
 	models <- data$models
 
-	# res <- list()
-
-	# for (model in models) {
-	# 	res[[model]] <- list()
-	# }
-
-
-	# i <- 1
-	# current_last_obs <- data$start_period - 1
-
-	# while (current_last_obs < total_n){
-	# 	## determine current indices and make data
-	# 	index <- 1:current_last_obs
-	# 	if (length(index) > max_n_past_obs) {
-	# 		current_earliest_obs <- length(index) - max_n_past_obs + 1
-	# 		index <- index[current_earliest_obs:current_last_obs]
-	# 	}
-	# 	current_y <- y[index]
-
-	# 	for (model in models) {
-	# 		res[[model]][[forecast_run]] <- i
-	# 		res[[model]][[predictive_samples]] <- fit()
-
-	# 	}
-
-
-
-
-	# 	i <- i + 1
-
-	# 	if (fit_type == "stan") {
-	# 		stanfit <- fit_stan_model(y, model, n_pred = n_pred, vb = vb,
-	# 							      length_local_trend = length_local_trend,
-	# 							      iter = iter)
-
-	# 		## store results
-	# 		stanfitobjects[[i]] <- stanfit
-	# 		predictive_samples[[i]] <- extract_samples(stanfit)
-	# 	} else {
-	# 		predictive_samples[[i]] <- bsts_wrapper(y, model,
-	# 								   num_pred  = n_pred)
-	# 	}
-
-	# 	forecast_run[[i]] <- rep(i, nrow(predictive_samples[[i]]))
-
-	# 	current_last_obs <- current_last_obs + interval
-	# }
-
-
-
 	## do forecasting
-	analysis$forecast_res <- forecast_one_country(y, include_stan = F)
+	analysis$forecast_res <- forecast_one_country(data = data, country = country, include_stan = F)
 	analysis$forecast_res <- add_average_model(analysis$forecast_res)
 
 
@@ -217,49 +190,70 @@ analysis_one_country <- function(y, country = "country",
 #' @export
 
 
-forecast_one_country <- function(y, include_stan = FALSE, models = NULL) {
+forecast_one_country <- function(data = NULL, 
+								 country = NULL, 
+								 y = NULL, 
+								 include_stan = FALSE, 
+								 models = NULL) {
+
+	if (is.null(y)) {
+		inputdata <- data$inputdata
+		y <- inputdata[inputdata$region == country, 
+			   		   colnames(inputdata) == "median"]
+	}
+	if (is.null(data)) {
+		start_period <- 8
+	} else {
+		start_period <- data$start_period
+	}
+
 	res <- list()
 	stanfitlist <- list()
 	scores <-list()
 
-	if (isTRUE(include_stan)) {
-		## lin_reg_stan
-		model_lin_reg <- models[[1]]
-		res$lin_reg_stan <- fit_iteratively(incidences = y, model = model_lin_reg,
-							   n_pred = 7, iter = 5000,
-	 					       max_n_past_obs = 7, vb = FALSE)
+	# if (isTRUE(include_stan)) {
+	# 	## lin_reg_stan
+	# 	model_lin_reg <- models[[1]]
+	# 	res$lin_reg_stan <- fit_iteratively(incidences = y, model = model_lin_reg,
+	# 						   n_pred = 7, iter = 5000,
+	#  					       max_n_past_obs = 7, vb = FALSE)
 
-		model_bsts <- models[[2]]
-		res$bsts_stan <- fit_iteratively(incidences = y,
-								model = model_bsts, n_pred = 7, iter = 5000,
-								prior_var_phi = 0.8, mean_phi = 1,
-								max_n_past_obs = Inf, vb = FALSE)
+	# 	model_bsts <- models[[2]]
+	# 	res$bsts_stan <- fit_iteratively(incidences = y,
+	# 							model = model_bsts, n_pred = 7, iter = 5000,
+	# 							prior_var_phi = 0.8, mean_phi = 1,
+	# 							max_n_past_obs = Inf, vb = FALSE)
 
-		model_bsts_local <- models[[3]]
-		res$bsts_local_stan <- fit_iteratively(incidences = y,
-									  model = model_bsts_local,
-									  n_pred = 7, iter = 5000,
-									  max_n_past_obs = 7, vb = FALSE)
-	}
+	# 	model_bsts_local <- models[[3]]
+	# 	res$bsts_local_stan <- fit_iteratively(incidences = y,
+	# 								  model = model_bsts_local,
+	# 								  n_pred = 7, iter = 5000,
+	# 								  max_n_past_obs = 7, vb = FALSE)
+	# }
 
 	res$bsts_local <- fit_iteratively(incidences = y,
 					  model = "local", n_pred = 7,
+					  start_period = start_period,
 					  fit_type = "bsts_package")
 
 	res$bsts_semilocal <- fit_iteratively(incidences = y,
 					  model = "semilocal", n_pred = 7,
+					  start_period = start_period,
 					  fit_type = "bsts_package")
 
 	res$bsts_local_student <- fit_iteratively(incidences = y,
 					  model = "local_student", n_pred = 7,
+					  start_period = start_period,
 					  fit_type = "bsts_package")
 
 	res$bsts_ar1 <- fit_iteratively(incidences = y,
 					  model = "ar1", n_pred = 7,
+					  start_period = start_period,
 					  fit_type = "bsts_package")
 
 	res$bsts_ar2 <- fit_iteratively(incidences = y,
 					  model = "ar2", n_pred = 7,
+					  start_period = start_period,
 					  fit_type = "bsts_package")
 
 

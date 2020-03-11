@@ -35,10 +35,11 @@ knitr::opts_chunk$set(
 ```
 
 ```{r load-packages, include=FALSE}
-library(epipredictr)
-library(rstan)
-options(mc.cores = 4)
-rstan_options(auto_write = TRUE)
+# library(epipredictr)
+# library(rstan)
+# options(mc.cores = 4)
+# rstan_options(auto_write = TRUE)
+library(ggplot2)
 library(scoringutils)
 library(dplyr)
 library(cowplot)
@@ -52,45 +53,58 @@ source("../R/forecast.R")
 
 ```{r load-data, include=FALSE}
 
-sk <- readRDS("../data/time_varying_params_south_korea.rds")[[1]]
-it <- readRDS("../data/time_varying_params_italy.rds")[[1]]
-# uk <- readRDS("data/time_varying_params_uk.rds")[[1]]
-jp <- readRDS("../data/time_varying_params_japan.rds")[[1]]
-sp <- readRDS("../data/time_varying_params_singapore.rds")[[1]]
+# sk <- readRDS("../data/time_varying_params_south_korea.rds")[[1]]
+# it <- readRDS("../data/time_varying_params_italy.rds")[[1]]
+# # uk <- readRDS("data/time_varying_params_uk.rds")[[1]]
+# jp <- readRDS("../data/time_varying_params_japan.rds")[[1]]
+# sp <- readRDS("../data/time_varying_params_singapore.rds")[[1]]
+# 
+# y_sk <- sk$median
+# y_jp <- jp$median
+# y_sp <- sp$median
+# y_it <- it$median
+# 
+# y_sk <- sk$median[1:10]
+# y_jp <- jp$median[1:10]
+# y_sp <- sp$median[1:10]
+# y_it <- it$median[1:10]
 
-y_sk <- sk$median
-y_jp <- jp$median
-y_sp <- sp$median
-y_it <- it$median
+inputdata <- load_all_timeseries(base_dir = "../data/Rt_estimates", 
+                                 date = as.Date("2020-03-09"))
+inputdata <- inputdata[1:17, ]
 
-y_sk <- sk$median[1:10]
-y_jp <- jp$median[1:10]
-y_sp <- sp$median[1:10]
-y_it <- it$median[1:10]
 
 ```
 
 ```{r do-analysis, include=FALSE}
-timeseries <- list(y_sk, y_jp, y_sp, y_it)
-dates <- lapply(timeseries, FUN = function(i) {1:length(timeseries[i])})
-countries <- c("South_Korea", "Japan", "Singapore", "Italy")
+
 models <- c("local", "semilocal", "local_student", "ar1", "ar2")
 
-data <- list(timeseries = timeseries, 
-			 countries = countries, 
-			 models = models, 
-			 n_pred = 7,
-			 start_period = 8, 
-			 dates = dates)
+data <- list(inputdata = inputdata, 
+             models = models,
+             n_pred = 7,
+             start_period = 4)
+
+ 
+# data <- list(timeseries = timeseries, 
+# 			 countries = countries, 
+# 			 models = models, 
+# 			 n_pred = 7,
+# 			 start_period = 8)
 
 analysis <- full_analysis(data)
 
-summary_prediction_result <- rbind(
-forecast_table(analysis$country_results$Japan$forecast_res$average, "Japan"),
-forecast_table(analysis$country_results$South_Korea$forecast_res$average, "South Korea"),
-forecast_table(analysis$country_results$Singapore$forecast_res$average, "Singapore"),
-forecast_table(analysis$country_results$Italy$forecast_res$average, "Italy")
+prediction_results <- lapply(
+  seq_along(analysis$countries),
+  FUN = function(i) {
+    region <- analysis$countries[i]
+    region_res <-
+      analysis$country_results[[region]]$forecast_res$average
+    forecast_table(region_res, region)
+  }
 )
+
+summary_prediction_result <- do.call(rbind, prediction_results)
 
 
 
