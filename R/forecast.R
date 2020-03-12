@@ -20,7 +20,7 @@ full_analysis <- function(data) {
 
 	# analysis by country ============================================= #
 	## collect results country-wise
-	res <- lapply(seq_along(countries),
+	country_results <- lapply(seq_along(countries),
 				  FUN = function(i) {
 				  	out <- tryCatch(
 				  		{
@@ -37,12 +37,12 @@ full_analysis <- function(data) {
 				  	return(out)
 				  })
 
-	failure <- lapply(res, is.null)
+	failure <- lapply(country_results, is.null)
 	failure <- do.call(c, failure)
 
-	res <- res[!failure]
+	country_results <- country_results[!failure]
 	countries <- countries[!failure]
-	names(res) <- countries
+	names(country_results) <- countries
 	## ================================================================ #
 
 
@@ -50,7 +50,7 @@ full_analysis <- function(data) {
 	## do aggregated scoring
 	scoring <- list()
 
-	tables <- lapply(res, '[[', 3)
+	tables <- lapply(country_results, '[[', 3)
 	tables <- lapply(seq_along(tables),
  					 FUN = function(i) {
  					 	cbind(country = countries[i], tables[[i]])
@@ -92,10 +92,10 @@ full_analysis <- function(data) {
 	predictions_best <- list()
 	for (country in countries) {
 
-		predictive_samples <- res[[country]]$forecast_res[[best]]$predictive_samples
-		y <- res[[country]]$forecast_res[[best]]$y
+		predictive_samples <- country_results[[country]]$region_results[[best]]$predictive_samples
+		y <- country_results[[country]]$region_results[[best]]$y
 
-		forecast_run <- res[[country]]$forecast_res[[best]]$forecast_run
+		forecast_run <- country_results[[country]]$region_results[[best]]$forecast_run
 
 		predictive_samples[!is.na(y), ] <- NA
 
@@ -112,7 +112,7 @@ full_analysis <- function(data) {
 
 	out <- list(countries = countries,
 				inputdata = inputdata,
-				country_results = res,
+				country_results = country_results,
 				scoring = scoring,
 				predictions_best = predictions_best)
 
@@ -142,68 +142,48 @@ full_analysis <- function(data) {
 
 analysis_one_country <- function(data, country = "country", plot = F) {
 	
-	analysis <- list()
+
+	models <- data$models
+	start_period <- data$start_period
+	n_pred <- data$n_pred
+
 	inputdata <- data$inputdata
 	y <- inputdata[inputdata$region == country, 
 				   colnames(inputdata) == "median"]
-	analysis$country <- country
-	models <- data$models
+	
+	out <- list()
+	out$country <- country
+
 
 	## do forecasting
-	analysis$forecast_res <- forecast_one_country(data = data, country = country, include_stan = F)
-	analysis$forecast_res <- add_average_model(analysis$forecast_res)
+
+	# if (isTRUE(include_stan)) {
+	# }
+
+	out$region_results <- list()
+	for (model in models) {
+		name <- paste("bsts_", model, sep = "")
+		out$region_results[[name]] <- fit_iteratively(incidences = y,
+									      model = model, n_pred = n_pred,
+									      start_period = start_period,
+									      fit_type = "bsts_package")
+	}
+
+	out$region_results <- add_average_model(out$region_results)
 
 
 	## do scoring
-	analysis$scoring_table <- compare_forecasts(analysis$forecast_res)
+	out$scoring_table <- compare_forecasts(out$region_results)
 
 	if(isTRUE(plot)) {
 		compare_bsts_models(y)
 	}
 
-	analysis$forecast_plot <- plot_forecast_compare(analysis$forecast_res)
-	return(analysis)
+	out$forecast_plot <- plot_forecast_compare(out$region_results)
+	return(out)
 }
 
 
-
-
-
-
-#' @title Wrapper to do all the fits that I have
-#'
-#' @description
-#' Missing.
-#' Also Todo: handling for only one item
-#' @param y
-#'
-#' @return
-#' Missing
-#' @examples
-#' NULL
-#' @export
-
-
-forecast_one_country <- function(data = NULL, 
-								 country = NULL, 
-								 y = NULL, 
-								 include_stan = FALSE, 
-								 models = NULL) {
-
-	if (is.null(y)) {
-		inputdata <- data$inputdata
-		y <- inputdata[inputdata$region == country, 
-			   		   colnames(inputdata) == "median"]
-	}
-	if (is.null(data)) {
-		start_period <- 8
-	} else {
-		start_period <- data$start_period
-	}
-
-	res <- list()
-	stanfitlist <- list()
-	scores <-list()
 
 	# if (isTRUE(include_stan)) {
 	# 	## lin_reg_stan
@@ -225,32 +205,32 @@ forecast_one_country <- function(data = NULL,
 	# 								  max_n_past_obs = 7, vb = FALSE)
 	# }
 
-	res$bsts_local <- fit_iteratively(incidences = y,
-					  model = "local", n_pred = 7,
-					  start_period = start_period,
-					  fit_type = "bsts_package")
-
-	res$bsts_semilocal <- fit_iteratively(incidences = y,
-					  model = "semilocal", n_pred = 7,
-					  start_period = start_period,
-					  fit_type = "bsts_package")
-
-	res$bsts_local_student <- fit_iteratively(incidences = y,
-					  model = "local_student", n_pred = 7,
-					  start_period = start_period,
-					  fit_type = "bsts_package")
-
-	res$bsts_ar1 <- fit_iteratively(incidences = y,
-					  model = "ar1", n_pred = 7,
-					  start_period = start_period,
-					  fit_type = "bsts_package")
-
-	res$bsts_ar2 <- fit_iteratively(incidences = y,
-					  model = "ar2", n_pred = 7,
-					  start_period = start_period,
-					  fit_type = "bsts_package")
 
 
-	return(res)
-}
+
+#' @title Wrapper to do all the fits that I have
+#'
+#' @description
+#' Missing.
+#' Also Todo: handling for only one item
+#' @param y
+#'
+#' @return
+#' Missing
+#' @examples
+#' NULL
+#' @export
+
+
+# forecast_one_country <- function(data = NULL, 
+# 								 country = NULL, 
+# 								 y = NULL, 
+# 								 include_stan = FALSE, 
+# 								 models = NULL) {
+
+	
+
+
+# 	return(res)
+# }
 
