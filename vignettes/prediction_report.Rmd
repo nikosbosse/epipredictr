@@ -68,13 +68,6 @@ data <- list(inputdata = inputdata,
              n_pred = 7,
              start_period = 4)
 
- 
-# data <- list(timeseries = timeseries, 
-# 			 countries = countries, 
-# 			 models = models, 
-# 			 n_pred = 7,
-# 			 start_period = 8)
-
 source("../R/utilities.R")
 source("../R/forecast.R")
 analysis <- full_analysis(data)
@@ -94,7 +87,7 @@ prediction_results <- lapply(
 
 summary_prediction_result <- do.call(rbind, prediction_results)
 
-analysis$country_results
+analysis$
 
 
 ```

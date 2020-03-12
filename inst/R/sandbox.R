@@ -55,8 +55,10 @@ data <- list(inputdata = inputdata,
 analysis <- full_analysis(data)
 
 
+region_results <- analysis$all_region_results$austria$region_results
 
-
+source("R/utilities.R")
+source("R/forecast.R")
 
 
 

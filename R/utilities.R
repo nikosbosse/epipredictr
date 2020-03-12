@@ -585,6 +585,7 @@ plot_forecast_compare <- function(pred_results) {
 #' @export 
 
 
+
 compare_forecasts <- function (pred_results) {
 	titles <- names(pred_results)
 	scores <- lapply(seq_along(pred_results), 
@@ -653,38 +654,6 @@ compare_bsts_models <- function(y) {
 }
 
 
-#' @title Do very basic model averaging
-#'
-#' @description
-#' Missing. 
-#' Also Todo: handling for only one item 
-#' @param y 
-#' 
-#' @return
-#' Missing
-#' @examples
-#' NULL
-#' @export 
-
-
-add_average_model <- function(pred_results) {
-	tmp <- lapply(seq_along(pred_results), 
-				  FUN = function(i) {
-				  	p <- pred_results[[i]]
-				  	p <- p$predictive_samples
-				  	return(p)
-				  })
-
-	pred <- tmp[[1]]
-	for (i in 2:length(pred_results)) {
-		pred <- pred + tmp[[i]] 
-	}
-	avg <- pred / length(pred_results)
-	pred_results$average$predictive_samples <- avg
-	pred_results$average$y <- pred_results[[1]]$y
-	pred_results$average$forecast_run <- pred_results[[1]]$forecast_run
-	return(pred_results)
-}
 
 #' @title Extract summary data.frame from forecasts
 #'

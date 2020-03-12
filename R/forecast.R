@@ -20,7 +20,7 @@ full_analysis <- function(data) {
 
 	# analysis by country ============================================= #
 	## collect results country-wise
-	country_results <- lapply(seq_along(countries),
+	all_region_results <- lapply(seq_along(countries),
 				  FUN = function(i) {
 				  	out <- tryCatch(
 				  		{
@@ -37,12 +37,12 @@ full_analysis <- function(data) {
 				  	return(out)
 				  })
 
-	failure <- lapply(country_results, is.null)
+	failure <- lapply(all_region_results, is.null)
 	failure <- do.call(c, failure)
 
-	country_results <- country_results[!failure]
+	all_region_results <- all_region_results[!failure]
 	countries <- countries[!failure]
-	names(country_results) <- countries
+	names(all_region_results) <- countries
 	## ================================================================ #
 
 
@@ -50,7 +50,7 @@ full_analysis <- function(data) {
 	## do aggregated scoring
 	scoring <- list()
 
-	tables <- lapply(country_results, '[[', 3)
+	tables <- lapply(all_region_results, '[[', 3)
 	tables <- lapply(seq_along(tables),
  					 FUN = function(i) {
  					 	cbind(country = countries[i], tables[[i]])
@@ -92,10 +92,10 @@ full_analysis <- function(data) {
 	predictions_best <- list()
 	for (country in countries) {
 
-		predictive_samples <- country_results[[country]]$region_results[[best]]$predictive_samples
-		y <- country_results[[country]]$region_results[[best]]$y
+		predictive_samples <- all_region_results[[country]]$region_results[[best]]$predictive_samples
+		y <- all_region_results[[country]]$region_results[[best]]$y
 
-		forecast_run <- country_results[[country]]$region_results[[best]]$forecast_run
+		forecast_run <- all_region_results[[country]]$region_results[[best]]$forecast_run
 
 		predictive_samples[!is.na(y), ] <- NA
 
@@ -112,7 +112,7 @@ full_analysis <- function(data) {
 
 	out <- list(countries = countries,
 				inputdata = inputdata,
-				country_results = country_results,
+				all_region_results = all_region_results,
 				scoring = scoring,
 				predictions_best = predictions_best)
 
@@ -141,7 +141,6 @@ full_analysis <- function(data) {
 #'
 
 analysis_one_country <- function(data, country = "country", plot = F) {
-	
 
 	models <- data$models
 	start_period <- data$start_period
@@ -207,30 +206,36 @@ analysis_one_country <- function(data, country = "country", plot = F) {
 
 
 
-
-#' @title Wrapper to do all the fits that I have
+#' @title Do very basic model averaging
 #'
 #' @description
-#' Missing.
-#' Also Todo: handling for only one item
-#' @param y
-#'
+#' Missing. 
+#' Also Todo: handling for only one item 
+#' @param y 
+#' 
 #' @return
 #' Missing
 #' @examples
 #' NULL
-#' @export
+#' @export 
 
 
-# forecast_one_country <- function(data = NULL, 
-# 								 country = NULL, 
-# 								 y = NULL, 
-# 								 include_stan = FALSE, 
-# 								 models = NULL) {
 
-	
+add_average_model <- function(region_results) {
+	tmp <- lapply(seq_along(region_results), 
+				  FUN = function(i) {
+				  	p <- region_results[[i]]
+				  	p <- p$predictive_samples
+				  	return(p)
+				  })
 
-
-# 	return(res)
-# }
-
+	pred <- tmp[[1]]
+	for (i in 2:length(region_results)) {
+		pred <- pred + tmp[[i]] 
+	}
+	avg <- pred / length(region_results)
+	region_results$average$predictive_samples <- avg
+	region_results$average$y <- region_results[[1]]$y
+	region_results$average$forecast_run <- region_results[[1]]$forecast_run
+	return(region_results)
+}
