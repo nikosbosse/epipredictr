@@ -143,45 +143,36 @@ full_analysis <- function(data) {
 
 analysis_one_country <- function(data, country = "country", plot = F) {
 
+
 	models <- data$models
-	start_period <- data$start_period
-	n_pred <- data$n_pred
-
-	inputdata <- data$inputdata
-	y <- inputdata[inputdata$region == country, 
-				   colnames(inputdata) == "median"]
-	dates <- inputdata[inputdata$region == country, 
-				   colnames(inputdata) == "date"]
-	
-	out <- list()
-	out$country <- country
-
-
+		
 	## do forecasting
-
 	# if (isTRUE(include_stan)) {
 	# }
-
-	out$region_results <- list()
+	region_results <- list()
 	for (model in models) {
 		name <- paste("bsts_", model, sep = "")
-		out$region_results[[name]] <- fit_iteratively(data, country = country, 
-									      incidences = y,
+		region_results[[name]] <- fit_iteratively(data, country = country, 
 									      model = model, 
 									      fit_type = "bsts_package")
 	}
 
-	out$region_results <- add_average_model(out$region_results)
+	region_results <- add_average_model(region_results)
 
 	## do scoring
-	out$scoring_table <- compare_forecasts(out$region_results)
+	scoring_table_region <- compare_forecasts(region_results)
 
 	if(isTRUE(plot)) {
+		y <- inputdata[inputdata$region == country, 
+				   colnames(inputdata) == "median"]
 		compare_bsts_models(y)
 	}
 
-	out$forecast_plot <- plot_forecast_compare(out$region_results)
-	return(out)
+	forecast_plot_region <- plot_forecast_compare(region_results)
+	return(list(country = country, 
+			    region_results = region_results,
+				scoring_table_region = scoring_table_region, 
+				forecast_plot_region = forecast_plot_region))
 }
 
 
