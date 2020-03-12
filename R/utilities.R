@@ -290,8 +290,10 @@ fit_iteratively <- function(data,
 	forecast_run <- c(forecast_run, rep(i, n_pred))
 
     ## add NAs to the predictions and the true_values
-    NA_mat <- matrix(NA, nrow = start_period - 1,
-    				 ncol = ncol(predictive_samples))
+    NA_mat <- as.data.frame(matrix(NA, nrow = start_period - 1,
+    				 ncol = ncol(predictive_samples)))
+
+    NA_mat[,1] <- predictive_samples[1,1] - nrow(NA_mat):1
     colnames(NA_mat) = colnames(predictive_samples) 
 
     predictive_samples <- rbind(NA_mat,
@@ -406,7 +408,17 @@ plot_pred_vs_true <- function(y_true,
 							  y_pred_samples,
 							  forecast_run,
 							  vlines = T,
+							  dates = NULL,
 							  plottitle = "Pred vs. True"){
+
+
+# y_pred_samples <- (analysis$all_region_results$austria$region_results$bsts_local$predictive_samples)
+
+# y_true <- (analysis$all_region_results$austria$region_results$bsts_local$y)
+# forecast_run <- (analysis$all_region_results$austria$region_results$bsts_local$forecast_run)
+	dates <- y_pred_samples$predicted_date
+	y_pred_samples <- y_pred_samples[, grep("sample", colnames(y_pred_samples))]
+
 	pred_mean <- rowMeans(y_pred_samples)
 	pred_median <- apply(y_pred_samples, median, MARGIN = 1)
 	pred_quantiles <- t(apply(y_pred_samples,
@@ -415,9 +427,9 @@ plot_pred_vs_true <- function(y_true,
 								probs = c(0.025, 0.25, 0.75, 0.975),
 							    na.rm = TRUE))
 
-	df <- as.data.frame(cbind(y_true, pred_median,
+	df <- as.data.frame(cbind(dates, y_true, pred_median,
 							  pred_mean, pred_quantiles, forecast_run))
-	colnames(df) <- c("true", "median", "mean", "ci2.5",
+	colnames(df) <- c("date", "true", "median", "mean", "ci2.5",
 					  "ci25", "ci75", "ci97.5", "forecast_run")
 
 	start_data <- sum(is.na(forecast_run))
@@ -436,7 +448,7 @@ plot_pred_vs_true <- function(y_true,
 		vlines <- 0
 	}
 
-	plot <- ggplot(df, aes(x = 1:nrow(df)), group = forecast_run) +
+	plot <- ggplot(df, aes(x = dates), group = forecast_run) +
 			geom_ribbon(aes(ymin =ci2.5, ymax = ci97.5), alpha = 0.5,
 						fill = "gray") +
 			geom_ribbon(aes(ymin = ci25, ymax = ci75), alpha = 0.7,
@@ -589,15 +601,16 @@ bsts_wrapper <- function(y, model,
 #' @export
 
 
-plot_forecast_compare <- function(pred_results) {
-	titles <- names(pred_results)
-	plots <- lapply(seq_along(pred_results),
+plot_forecast_compare <- function(region_results, dates) {
+	titles <- names(region_results)
+	plots <- lapply(seq_along(region_results),
 					FUN = function (i) {
 						plot_pred_vs_true(
-						 y_pred_samples = pred_results[[i]]$predictive_samples,
-						 y_true = pred_results[[i]]$y,
-						 forecast_run = pred_results[[i]]$forecast_run,
-						 plottitle = titles[i]
+						 y_pred_samples = region_results[[i]]$predictive_samples, 
+						 y_true = region_results[[i]]$y,
+						 forecast_run = region_results[[i]]$forecast_run,
+						 plottitle = titles[i], 
+						 dates = dates
 						)
 			        })
 
@@ -605,6 +618,8 @@ plot_forecast_compare <- function(pred_results) {
 	return(p)
 
 }
+
+
 
 
 #' @title Wrapper to compare forecasts
@@ -621,13 +636,13 @@ plot_forecast_compare <- function(pred_results) {
 #' @export
 
 
-
 compare_forecasts <- function(region_results = NULL) {
 	titles <- names(region_results)
 	scores <- lapply(seq_along(region_results),
 					 FUN = function (i) {
 					 	y <- region_results[[i]]$y
 					 	pred <- region_results[[i]]$predictive_samples
+					 	pred <- pred[, grep("sample", colnames(pred))]
 					 	forecast_run <-region_results[[i]]$forecast_run
 					 	ind <- (!is.na(y) & !is.na(forecast_run))
 					 	y <- y[ind]

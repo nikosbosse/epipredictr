@@ -21,6 +21,7 @@ full_analysis <- function(data) {
 	# analysis by country ============================================= #
 	## collect results country-wise
 	all_region_results <- lapply(seq_along(countries),
+
 				  FUN = function(i) {
 				  	out <- tryCatch(
 				  		{
@@ -143,9 +144,11 @@ full_analysis <- function(data) {
 
 analysis_one_country <- function(data, country = "country", plot = F) {
 
-
 	models <- data$models
-		
+	inputdata <- data$inputdata
+	dates = inputdata[inputdata$region == country,	
+			      colnames(inputdata) == "date"]	
+
 	## do forecasting
 	# if (isTRUE(include_stan)) {
 	# }
@@ -169,7 +172,7 @@ analysis_one_country <- function(data, country = "country", plot = F) {
 		compare_bsts_models(y)
 	}
 
-	forecast_plot_region <- plot_forecast_compare(region_results)
+	forecast_plot_region <- plot_forecast_compare(region_results, dates)
 	return(list(country = country, 
 			    region_results = region_results,
 				scoring_table_region = scoring_table_region, 
@@ -228,6 +231,11 @@ add_average_model <- function(region_results) {
 		pred <- pred + tmp[[i]] 
 	}
 	avg <- pred / length(region_results)
+
+	## add column with date and days ahead
+	avg <- cbind(region_results[[1]]$predictive_samples[,1:2], avg)
+
+
 	region_results$average$predictive_samples <- avg
 	region_results$average$y <- region_results[[1]]$y
 	region_results$average$forecast_run <- region_results[[1]]$forecast_run

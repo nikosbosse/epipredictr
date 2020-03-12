@@ -75,6 +75,8 @@ data <- list(inputdata = inputdata,
 
 analysis <- full_analysis(data)
 
+analysis$all_region_results$austria$forecast_plot_region
+
 prediction_results <- lapply(
   seq_along(analysis$countries),
   FUN = function(i) {
