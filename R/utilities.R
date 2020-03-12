@@ -192,7 +192,9 @@ fit_iteratively <- function(data,
 
 	inputdata <- data$inputdata
 	y = inputdata[inputdata$region == country,
-				   		   colnames(inputdata) == "median"]
+				  colnames(inputdata) == "median"]
+	dates = inputdata[inputdata$region == country,
+				      colnames(inputdata) == "date"]
 	n_pred = data$n_pred
 	start_period = data$start_period
 
@@ -205,18 +207,19 @@ fit_iteratively <- function(data,
 	n_runs <- ceiling((total_n - (start_period - 1)) / n_pred)
 
 	## initialize empty lists to hold the results
-
-	stanfitobjects <- list()
 	predictive_samples <- list()
 	forecast_run <-list()
+	stanfitobjects <- list()
 
 	## do iterative fitting
 	i <- 0
 	current_last_obs <- start_period - 1
-	if (current_last_obs > total_n) stop("start_period later than length of series")
+	if (current_last_obs > total_n) {
+		stop("start_period later than length of series")
+	}
 
 	while (current_last_obs < total_n){
-		cat("run ", as.character(i + 1), "of ", as.character(n_runs), "\n")
+		cat("run ", as.character(i + 1), "of ", as.character(n_runs + 1), "\n")
 
 		## determine current indices and make data
 		index <- 1:current_last_obs
@@ -225,19 +228,20 @@ fit_iteratively <- function(data,
 			index <- index[current_earliest_obs:current_last_obs]
 		}
 		y_curr <- y[index]
+		curr_dates <- dates[index]
 		i <- i + 1
 
 		if (fit_type == "stan") {
-			stanfit <- fit_stan_model(y_curr, model, n_pred = n_pred, vb = vb,
-								      length_local_trend = length_local_trend,
-								      iter = iter)
-
-			## store results
-			stanfitobjects[[i]] <- stanfit
-			predictive_samples[[i]] <- extract_samples(stanfit)
+			# stanfit <- fit_stan_model(y_curr, model, n_pred = n_pred, vb = vb,
+			# 					      length_local_trend = length_local_trend,
+			# 					      iter = iter)
+			# stanfitobjects[[i]] <- stanfit
+			# predictive_samples[[i]] <- extract_samples(stanfit)
 		} else {
-			predictive_samples[[i]] <- bsts_wrapper(y, model,
-									   num_pred  = n_pred)
+			predictive_samples[[i]] <- bsts_wrapper(y = y_curr,
+													dates = dates,
+													model = model,
+													num_pred  = n_pred)
 		}
 
 		forecast_run[[i]] <- rep(i, nrow(predictive_samples[[i]]))
@@ -247,6 +251,7 @@ fit_iteratively <- function(data,
 
 
     predictive_samples <- do.call("rbind", predictive_samples)
+
     forecast_run <- do.call("c", forecast_run)
 
     ## cap predictions to match the length of the
@@ -262,28 +267,34 @@ fit_iteratively <- function(data,
 			index <- index[current_earliest_obs:total_n]
 		}
 	y_curr <- y[index]
+	cat("run ", as.character(i + 1), "of ", as.character(n_runs + 1), "\n")
 	i <- i + 1
 	if (fit_type == "stan") {
-			stanfit <- fit_stan_model(y, model,
-							  n_pred = n_pred,
-							  vb = vb,
-							  iter = iter,
-							  length_local_trend = length_local_trend)
+			# stanfit <- fit_stan_model(y, model,
+			# 				  n_pred = n_pred,
+			# 				  vb = vb,
+			# 				  iter = iter,
+			# 				  length_local_trend = length_local_trend)
 
-			stanfitobjects[[i]] <- stanfit
-			predictive_samples <- rbind(predictive_samples,
-								     	extract_samples(stanfit))
+			# stanfitobjects[[i]] <- stanfit
+			# predictive_samples <- rbind(predictive_samples,
+			# 					     	extract_samples(stanfit))
 		} else {
 			predictive_samples <- rbind(predictive_samples,
-										bsts_wrapper(y, model,
-												     num_pred  = n_pred))
+										bsts_wrapper(y = y_curr,
+										 			 dates = dates,
+													 model = model,
+													 num_pred  = n_pred))
 		}
 
 	forecast_run <- c(forecast_run, rep(i, n_pred))
 
     ## add NAs to the predictions and the true_values
-    predictive_samples <- rbind(matrix(NA, nrow = start_period - 1,
-    									   ncol = ncol(predictive_samples)),
+    NA_mat <- matrix(NA, nrow = start_period - 1,
+    				 ncol = ncol(predictive_samples))
+    colnames(NA_mat) = colnames(predictive_samples) 
+
+    predictive_samples <- rbind(NA_mat,
 								predictive_samples)
     y <- c(y, rep(NA, n_pred))
     forecast_run <- c(rep(NA, start_period - 1), forecast_run)
@@ -517,7 +528,9 @@ plot_prior_vs_posterior <- function(stanfitobjects) {
 #' @description
 #' Missing.
 #' Also Todo: handling for only one item
-#' @param y
+#' @param dates The dates for the data that is uses for the prediction.
+#' We need the last date in order to specify the date for which the predictions
+#' are made
 #'
 #' @return
 #' Missing
@@ -526,7 +539,8 @@ plot_prior_vs_posterior <- function(stanfitobjects) {
 #' @export
 
 bsts_wrapper <- function(y, model,
-						 num_pred = 7,
+						 num_pred = NULL,
+						 dates = dates,
 						 n_iter = 2000) {
 	if (model == "semilocal") {
 		ss <- AddSemilocalLinearTrend(list(), y)
@@ -543,7 +557,18 @@ bsts_wrapper <- function(y, model,
 	bsts.model <- bsts::bsts(y, state.specification = ss, niter = 1000, ping=0)
 	#burn <- SuggestBurn(0.1, bsts.model)
 	p <- predict.bsts(bsts.model, horizon = 7, burn = 100, quantiles = c(.025, .975))
-	return(t(p$distribution))
+	
+	predictive_samples <- as.data.frame(t(p$distribution))
+	colnames(predictive_samples) <- paste("sample", 1:ncol(predictive_samples))
+	
+	days_ahead <- 1:nrow(predictive_samples)
+	last_date <- dates[length(dates)]
+	predicted_date <- last_date + days_ahead
+	predictive_samples <- cbind(predicted_date = predicted_date, 
+	                            days_ahead = days_ahead, 
+	                            predictive_samples)
+	
+	return(predictive_samples)
 
 }
 
@@ -673,7 +698,8 @@ compare_bsts_models <- function(y) {
 #' @description
 #' Missing.
 #' Also Todo: handling for only one item
-#' @param y
+#' @param results_region_model results from the best model for a particular
+#' region
 #'
 #' @return
 #' Missing
@@ -681,12 +707,15 @@ compare_bsts_models <- function(y) {
 #' NULL
 #' @export
 
-forecast_table <- function(pred_result, country = "country") {
-	pred <- pred_result$predictive_samples[is.na(pred_result$y), ]
+forecast_table <- function(results_region_model, country = "country") {
 
-	median_3 <- median(pred[3, ])
-	mean_3 <- median(pred[3, ])
-	quantiles_3 <- quantile(pred[3, ], c(0.025, 0.25, 0.75, 0.975))
+	pred <- results_region_model$predictive_samples[is.na(results_region_model$y), ]
+
+	pred <- pred[, grep("sample", colnames(pred))]
+
+	median_3 <- median(as.numeric(pred[3, ]))
+	mean_3 <- median(as.numeric(pred[3, ]))
+	quantiles_3 <- quantile(as.numeric(pred[3, ]), c(0.025, 0.25, 0.75, 0.975))
 
 	df <- data.frame(country = country,
 					 median_3 = median_3,

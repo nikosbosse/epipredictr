@@ -152,9 +152,10 @@ analysis_one_country <- function(data, country = "country", plot = F) {
 	region_results <- list()
 	for (model in models) {
 		name <- paste("bsts_", model, sep = "")
-		region_results[[name]] <- fit_iteratively(data, country = country, 
-									      model = model, 
-									      fit_type = "bsts_package")
+		region_results[[name]] <- fit_iteratively(data, 
+												  country = country, 
+									      		  model = model, 
+									      		  fit_type = "bsts_package")
 	}
 
 	region_results <- add_average_model(region_results)
@@ -219,6 +220,7 @@ add_average_model <- function(region_results) {
 				  FUN = function(i) {
 				  	p <- region_results[[i]]
 				  	p <- p$predictive_samples
+				  	p <- p[, grep("sample", colnames(p))]
 				  	return(p)
 				  })
 	pred <- tmp[[1]]
