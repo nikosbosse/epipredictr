@@ -33,7 +33,7 @@ static int current_statement_begin__;
 stan::io::program_reader prog_reader__() {
     stan::io::program_reader reader;
     reader.add_event(0, 0, "start", "model_bsts");
-    reader.add_event(79, 77, "end", "model_bsts");
+    reader.add_event(80, 78, "end", "model_bsts");
     return reader;
 }
 #include <stan_meta_header.hpp>
@@ -43,6 +43,7 @@ private:
         std::vector<double> y;
         int n_pred;
         double prior_var_phi;
+        double mean_phi;
         std::vector<double> r;
 public:
     model_bsts(stan::io::var_context& context__,
@@ -102,15 +103,21 @@ public:
             vals_r__ = context__.vals_r("prior_var_phi");
             pos__ = 0;
             prior_var_phi = vals_r__[pos__++];
+            current_statement_begin__ = 6;
+            context__.validate_dims("data initialization", "mean_phi", "double", context__.to_vec());
+            mean_phi = double(0);
+            vals_r__ = context__.vals_r("mean_phi");
+            pos__ = 0;
+            mean_phi = vals_r__[pos__++];
             // initialize transformed data variables
-            current_statement_begin__ = 9;
+            current_statement_begin__ = 10;
             validate_non_negative_index("r", "N", N);
             r = std::vector<double>(N, double(0));
             stan::math::fill(r, DUMMY_VAR__);
             // execute transformed data statements
-            current_statement_begin__ = 10;
+            current_statement_begin__ = 11;
             for (int i = 1; i <= N; ++i) {
-                current_statement_begin__ = 11;
+                current_statement_begin__ = 12;
                 stan::model::assign(r, 
                             stan::model::cons_list(stan::model::index_uni(i), stan::model::nil_index_list()), 
                             stan::math::log((get_base1(y, i, "y", 1) / (15 - get_base1(y, i, "y", 1)))), 
@@ -120,16 +127,16 @@ public:
             // validate, set parameter ranges
             num_params_r__ = 0U;
             param_ranges_i__.clear();
-            current_statement_begin__ = 17;
-            num_params_r__ += 1;
             current_statement_begin__ = 18;
             num_params_r__ += 1;
             current_statement_begin__ = 19;
             num_params_r__ += 1;
             current_statement_begin__ = 20;
+            num_params_r__ += 1;
+            current_statement_begin__ = 21;
             validate_non_negative_index("delta", "N", N);
             num_params_r__ += (1 * N);
-            current_statement_begin__ = 21;
+            current_statement_begin__ = 22;
             num_params_r__ += 1;
         } catch (const std::exception& e) {
             stan::lang::rethrow_located(e, current_statement_begin__, prog_reader__());
@@ -148,7 +155,7 @@ public:
         (void) pos__; // dummy call to supress warning
         std::vector<double> vals_r__;
         std::vector<int> vals_i__;
-        current_statement_begin__ = 17;
+        current_statement_begin__ = 18;
         if (!(context__.contains_r("sigma_epsilon")))
             stan::lang::rethrow_located(std::runtime_error(std::string("Variable sigma_epsilon missing")), current_statement_begin__, prog_reader__());
         vals_r__ = context__.vals_r("sigma_epsilon");
@@ -161,7 +168,7 @@ public:
         } catch (const std::exception& e) {
             stan::lang::rethrow_located(std::runtime_error(std::string("Error transforming variable sigma_epsilon: ") + e.what()), current_statement_begin__, prog_reader__());
         }
-        current_statement_begin__ = 18;
+        current_statement_begin__ = 19;
         if (!(context__.contains_r("sigma_eta")))
             stan::lang::rethrow_located(std::runtime_error(std::string("Variable sigma_eta missing")), current_statement_begin__, prog_reader__());
         vals_r__ = context__.vals_r("sigma_eta");
@@ -174,7 +181,7 @@ public:
         } catch (const std::exception& e) {
             stan::lang::rethrow_located(std::runtime_error(std::string("Error transforming variable sigma_eta: ") + e.what()), current_statement_begin__, prog_reader__());
         }
-        current_statement_begin__ = 19;
+        current_statement_begin__ = 20;
         if (!(context__.contains_r("phi")))
             stan::lang::rethrow_located(std::runtime_error(std::string("Variable phi missing")), current_statement_begin__, prog_reader__());
         vals_r__ = context__.vals_r("phi");
@@ -187,7 +194,7 @@ public:
         } catch (const std::exception& e) {
             stan::lang::rethrow_located(std::runtime_error(std::string("Error transforming variable phi: ") + e.what()), current_statement_begin__, prog_reader__());
         }
-        current_statement_begin__ = 20;
+        current_statement_begin__ = 21;
         if (!(context__.contains_r("delta")))
             stan::lang::rethrow_located(std::runtime_error(std::string("Variable delta missing")), current_statement_begin__, prog_reader__());
         vals_r__ = context__.vals_r("delta");
@@ -207,7 +214,7 @@ public:
                 stan::lang::rethrow_located(std::runtime_error(std::string("Error transforming variable delta: ") + e.what()), current_statement_begin__, prog_reader__());
             }
         }
-        current_statement_begin__ = 21;
+        current_statement_begin__ = 22;
         if (!(context__.contains_r("D")))
             stan::lang::rethrow_located(std::runtime_error(std::string("Variable D missing")), current_statement_begin__, prog_reader__());
         vals_r__ = context__.vals_r("D");
@@ -245,28 +252,28 @@ public:
         try {
             stan::io::reader<local_scalar_t__> in__(params_r__, params_i__);
             // model parameters
-            current_statement_begin__ = 17;
+            current_statement_begin__ = 18;
             local_scalar_t__ sigma_epsilon;
             (void) sigma_epsilon;  // dummy to suppress unused var warning
             if (jacobian__)
                 sigma_epsilon = in__.scalar_lb_constrain(0, lp__);
             else
                 sigma_epsilon = in__.scalar_lb_constrain(0);
-            current_statement_begin__ = 18;
+            current_statement_begin__ = 19;
             local_scalar_t__ sigma_eta;
             (void) sigma_eta;  // dummy to suppress unused var warning
             if (jacobian__)
                 sigma_eta = in__.scalar_lb_constrain(0, lp__);
             else
                 sigma_eta = in__.scalar_lb_constrain(0);
-            current_statement_begin__ = 19;
+            current_statement_begin__ = 20;
             local_scalar_t__ phi;
             (void) phi;  // dummy to suppress unused var warning
             if (jacobian__)
                 phi = in__.scalar_lub_constrain(-(1), 1, lp__);
             else
                 phi = in__.scalar_lub_constrain(-(1), 1);
-            current_statement_begin__ = 20;
+            current_statement_begin__ = 21;
             std::vector<local_scalar_t__> delta;
             size_t delta_d_0_max__ = N;
             delta.reserve(delta_d_0_max__);
@@ -276,7 +283,7 @@ public:
                 else
                     delta.push_back(in__.scalar_constrain());
             }
-            current_statement_begin__ = 21;
+            current_statement_begin__ = 22;
             local_scalar_t__ D;
             (void) D;  // dummy to suppress unused var warning
             if (jacobian__)
@@ -284,23 +291,23 @@ public:
             else
                 D = in__.scalar_constrain();
             // model body
-            current_statement_begin__ = 29;
+            current_statement_begin__ = 30;
             for (int s = 1; s <= (N - 1); ++s) {
-                current_statement_begin__ = 32;
-                lp_accum__.add(normal_log<propto__>(get_base1(y, (s + 1), "y", 1), (get_base1(y, s, "y", 1) + get_base1(delta, s, "delta", 1)), sigma_epsilon));
                 current_statement_begin__ = 33;
+                lp_accum__.add(normal_log<propto__>(get_base1(y, (s + 1), "y", 1), (get_base1(y, s, "y", 1) + get_base1(delta, s, "delta", 1)), sigma_epsilon));
+                current_statement_begin__ = 34;
                 lp_accum__.add(normal_log<propto__>(get_base1(delta, (s + 1), "delta", 1), (D + (phi * (get_base1(delta, s, "delta", 1) - D))), sigma_eta));
             }
-            current_statement_begin__ = 35;
-            lp_accum__.add(normal_log<propto__>(get_base1(delta, 1, "delta", 1), D, sigma_eta));
             current_statement_begin__ = 36;
-            lp_accum__.add(normal_log<propto__>(D, 0, 1));
+            lp_accum__.add(normal_log<propto__>(get_base1(delta, 1, "delta", 1), D, sigma_eta));
             current_statement_begin__ = 37;
-            lp_accum__.add(normal_log<propto__>(phi, 0, prior_var_phi));
+            lp_accum__.add(normal_log<propto__>(D, 0, 1));
             current_statement_begin__ = 38;
-            lp_accum__.add(inv_gamma_log<propto__>(sigma_eta, 1, 1));
+            lp_accum__.add(normal_log<propto__>(phi, mean_phi, prior_var_phi));
             current_statement_begin__ = 39;
-            lp_accum__.add(inv_gamma_log<propto__>(sigma_epsilon, 1, 1));
+            lp_accum__.add(exponential_log<propto__>(sigma_eta, 3));
+            current_statement_begin__ = 40;
+            lp_accum__.add(exponential_log<propto__>(sigma_epsilon, 3));
         } catch (const std::exception& e) {
             stan::lang::rethrow_located(e, current_statement_begin__, prog_reader__());
             // Next line prevents compiler griping about no return
@@ -405,100 +412,100 @@ public:
             if (!include_gqs__ && !include_tparams__) return;
             if (!include_gqs__) return;
             // declare and define generated quantities
-            current_statement_begin__ = 45;
+            current_statement_begin__ = 46;
             validate_non_negative_index("y_pred", "n_pred", n_pred);
             std::vector<double> y_pred(n_pred, double(0));
             stan::math::initialize(y_pred, DUMMY_VAR__);
             stan::math::fill(y_pred, DUMMY_VAR__);
-            current_statement_begin__ = 46;
+            current_statement_begin__ = 47;
             validate_non_negative_index("delta_pred", "n_pred", n_pred);
             std::vector<double> delta_pred(n_pred, double(0));
             stan::math::initialize(delta_pred, DUMMY_VAR__);
             stan::math::fill(delta_pred, DUMMY_VAR__);
-            current_statement_begin__ = 47;
+            current_statement_begin__ = 48;
             validate_non_negative_index("y_post", "N", N);
             std::vector<double> y_post(N, double(0));
             stan::math::initialize(y_post, DUMMY_VAR__);
             stan::math::fill(y_post, DUMMY_VAR__);
-            current_statement_begin__ = 51;
+            current_statement_begin__ = 52;
             double phi_prior;
             (void) phi_prior;  // dummy to suppress unused var warning
             stan::math::initialize(phi_prior, DUMMY_VAR__);
             stan::math::fill(phi_prior, DUMMY_VAR__);
-            current_statement_begin__ = 52;
+            current_statement_begin__ = 53;
             double sigma_eta_prior;
             (void) sigma_eta_prior;  // dummy to suppress unused var warning
             stan::math::initialize(sigma_eta_prior, DUMMY_VAR__);
             stan::math::fill(sigma_eta_prior, DUMMY_VAR__);
-            current_statement_begin__ = 53;
+            current_statement_begin__ = 54;
             double sigma_epsilon_prior;
             (void) sigma_epsilon_prior;  // dummy to suppress unused var warning
             stan::math::initialize(sigma_epsilon_prior, DUMMY_VAR__);
             stan::math::fill(sigma_epsilon_prior, DUMMY_VAR__);
             // generated quantities statements
-            current_statement_begin__ = 57;
-            stan::math::assign(phi_prior, normal_rng(0, prior_var_phi, base_rng__));
             current_statement_begin__ = 58;
-            stan::math::assign(sigma_eta_prior, inv_gamma_rng(1, 1, base_rng__));
+            stan::math::assign(phi_prior, normal_rng(mean_phi, prior_var_phi, base_rng__));
             current_statement_begin__ = 59;
-            stan::math::assign(sigma_epsilon_prior, inv_gamma_rng(1, 1, base_rng__));
-            current_statement_begin__ = 63;
+            stan::math::assign(sigma_eta_prior, exponential_rng(3, base_rng__));
+            current_statement_begin__ = 60;
+            stan::math::assign(sigma_epsilon_prior, exponential_rng(3, base_rng__));
+            current_statement_begin__ = 64;
             stan::model::assign(y_post, 
                         stan::model::cons_list(stan::model::index_uni(1), stan::model::nil_index_list()), 
                         normal_rng(get_base1(y, 1, "y", 1), sigma_epsilon, base_rng__), 
                         "assigning variable y_post");
-            current_statement_begin__ = 64;
+            current_statement_begin__ = 65;
             for (int s = 1; s <= (N - 1); ++s) {
-                current_statement_begin__ = 65;
+                current_statement_begin__ = 66;
                 stan::model::assign(y_post, 
                             stan::model::cons_list(stan::model::index_uni((s + 1)), stan::model::nil_index_list()), 
                             normal_rng((get_base1(y_post, s, "y_post", 1) + get_base1(delta, s, "delta", 1)), sigma_epsilon, base_rng__), 
                             "assigning variable y_post");
             }
-            current_statement_begin__ = 70;
+            current_statement_begin__ = 71;
             stan::model::assign(y_pred, 
                         stan::model::cons_list(stan::model::index_uni(1), stan::model::nil_index_list()), 
                         normal_rng((get_base1(y, N, "y", 1) + get_base1(delta, N, "delta", 1)), sigma_epsilon, base_rng__), 
                         "assigning variable y_pred");
-            current_statement_begin__ = 71;
+            current_statement_begin__ = 72;
             stan::model::assign(delta_pred, 
                         stan::model::cons_list(stan::model::index_uni(1), stan::model::nil_index_list()), 
                         normal_rng((D + (phi * (get_base1(delta, N, "delta", 1) - D))), sigma_epsilon, base_rng__), 
                         "assigning variable delta_pred");
-            current_statement_begin__ = 73;
+            current_statement_begin__ = 74;
             for (int s = 1; s <= (n_pred - 1); ++s) {
-                current_statement_begin__ = 74;
+                current_statement_begin__ = 75;
                 stan::model::assign(y_pred, 
                             stan::model::cons_list(stan::model::index_uni((s + 1)), stan::model::nil_index_list()), 
                             normal_rng((get_base1(y_pred, s, "y_pred", 1) + get_base1(delta_pred, s, "delta_pred", 1)), sigma_epsilon, base_rng__), 
                             "assigning variable y_pred");
-                current_statement_begin__ = 75;
+                current_statement_begin__ = 76;
                 stan::model::assign(delta_pred, 
                             stan::model::cons_list(stan::model::index_uni((s + 1)), stan::model::nil_index_list()), 
                             normal_rng((D + (phi * (get_base1(delta_pred, s, "delta_pred", 1) - D))), sigma_epsilon, base_rng__), 
                             "assigning variable delta_pred");
             }
             // validate, write generated quantities
-            current_statement_begin__ = 45;
+            current_statement_begin__ = 46;
             size_t y_pred_k_0_max__ = n_pred;
             for (size_t k_0__ = 0; k_0__ < y_pred_k_0_max__; ++k_0__) {
                 vars__.push_back(y_pred[k_0__]);
             }
-            current_statement_begin__ = 46;
+            current_statement_begin__ = 47;
             size_t delta_pred_k_0_max__ = n_pred;
             for (size_t k_0__ = 0; k_0__ < delta_pred_k_0_max__; ++k_0__) {
                 vars__.push_back(delta_pred[k_0__]);
             }
-            current_statement_begin__ = 47;
+            current_statement_begin__ = 48;
             size_t y_post_k_0_max__ = N;
             for (size_t k_0__ = 0; k_0__ < y_post_k_0_max__; ++k_0__) {
                 vars__.push_back(y_post[k_0__]);
             }
-            current_statement_begin__ = 51;
-            vars__.push_back(phi_prior);
             current_statement_begin__ = 52;
-            vars__.push_back(sigma_eta_prior);
+            vars__.push_back(phi_prior);
             current_statement_begin__ = 53;
+            vars__.push_back(sigma_eta_prior);
+            current_statement_begin__ = 54;
             vars__.push_back(sigma_epsilon_prior);
         } catch (const std::exception& e) {
             stan::lang::rethrow_located(e, current_statement_begin__, prog_reader__());

@@ -15,9 +15,7 @@ vignette: >
 
 *Last Updated:* `r (Sys.Date() - 1)`
 
-*Note: this is preliminary analysis, has not yet been peer-reviewed and is updated daily as new data becomes available. This work is licensed under a [Creative Commons Attribution 4.0 International License](https://creativecommons.org/licenses/by/4.0/). A summary of this report can be downloaded [here](https://cmmid.github.io/topics/covid19/current-patterns-transmission/reports/global-time-varying-transmission/summary.pdf)*
-
-
+*Note: this is preliminary analysis, has not yet been peer-reviewed and is updated daily as new data becomes available. This work is licensed under a [Creative Commons Attribution 4.0 International License](https://creativecommons.org/licenses/by/4.0/)*
 
 
 ```{r setup, include = FALSE}
@@ -39,12 +37,13 @@ knitr::opts_chunk$set(
 # library(rstan)
 # options(mc.cores = 4)
 # rstan_options(auto_write = TRUE)
-library(ggplot2)
-library(scoringutils)
-library(dplyr)
-library(cowplot)
-library(patchwork)
-library(bsts)
+if (!require(pacman)) install.packages("pacman"); library(pacman)
+p_load("ggplot2")
+p_load_gh("epiforecasts/scoringutils")
+p_load("dplyr")
+p_load("cowplot")
+p_load("patchwork")
+p_load("bsts")
 par(family = "Serif")
 source("../R/utilities.R")
 source("../R/forecast.R")
@@ -55,8 +54,6 @@ source("../R/forecast.R")
 inputdata <- load_all_timeseries(base_dir = "../data/Rt_estimates", 
                                  date = as.Date("2020-03-09"))
 inputdata <- inputdata[1:17, ]
-
-
 ```
 
 ```{r do-analysis, include=FALSE}
@@ -86,10 +83,6 @@ prediction_results <- lapply(
 )
 
 summary_prediction_result <- do.call(rbind, prediction_results)
-
-analysis$
-
-
 ```
 
 
@@ -164,7 +157,6 @@ knitr::kable(analysis$scoring$scores_ranked_mean)
 
 ```{r South-Korea, fig.width=10, fig.height=18}
 analysis$country_results$South_Korea$forecast_plot
-
 ```
 
 ### Prediction Scores
@@ -176,7 +168,6 @@ analysis$country_results$South_Korea$forecast_plot
 
 ```{r Japan, fig.width=10, fig.height=18}
 analysis$country_results$Japan$forecast_plot
-
 ```
 
 #### Prediction Scores
@@ -188,7 +179,6 @@ analysis$country_results$Japan$forecast_plot
 
 ```{r Singapore, fig.width=10, fig.height=18}
 analysis$country_results$Singapore$forecast_plot
-
 ```
 
 #### Prediction Scores
@@ -201,7 +191,6 @@ analysis$country_results$Singapore$forecast_plot
 
 ```{r Italy, fig.width=10, fig.height=18}
 analysis$country_results$Italy$forecast_plot
-
 ```
 
 #### Prediction Scores
