@@ -586,13 +586,13 @@ plot_forecast_compare <- function(pred_results) {
 
 
 
-compare_forecasts <- function (pred_results) {
-	titles <- names(pred_results)
-	scores <- lapply(seq_along(pred_results), 
+compare_forecasts <- function (region_results) {
+	titles <- names(region_results)
+	scores <- lapply(seq_along(region_results), 
 					 FUN = function (i) {
-					 	y <- pred_results[[i]]$y
-					 	pred <- pred_results[[i]]$predictive_samples
-					 	forecast_run <- pred_results[[i]]$forecast_run
+					 	y <- region_results[[i]]$y
+					 	pred <- region_results[[i]]$predictive_samples
+					 	forecast_run <-region_results[[i]]$forecast_run
 					 	ind <- (!is.na(y) & !is.na(forecast_run))
 					 	y <- y[ind]
 					 	pred <- pred[ind, ]
