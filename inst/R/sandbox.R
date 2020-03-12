@@ -60,7 +60,6 @@ analysis <- full_analysis(data)
 
 
 
-
 ## work on the analysis fit function
 analysis_one_country <- function(y, country = "country",
 								 data, plot = F) {

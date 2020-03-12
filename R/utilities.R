@@ -11,7 +11,7 @@
 #'
 #' @examples
 #' NULL
-#' @export 
+#' @export
 #' @references
 #' NULL
 
@@ -37,7 +37,7 @@ get_data <- function() {
 #'
 #' @examples
 #' NULL
-#' @export 
+#' @export
 #' @references
 #' NULL
 
@@ -49,14 +49,14 @@ load_all_timeseries <- function(base_dir = NULL, date = NULL, ts_type = "R") {
 
 	regions <- list.files(base_dir)
 
-	dfs <- lapply(seq_along(regions), 
+	dfs <- lapply(seq_along(regions),
 				  FUN = function(i) {
 				  	tryCatch(
-				  	{ load_single_timeseries(base_dir, 
-				  							   regions[i], 
-				  							   date, 
+				  	{ load_single_timeseries(base_dir,
+				  							   regions[i],
+				  							   date,
 				  							 ts_type = ts_type)
-				  	}, 
+				  	},
 				  	error=function(cond) {return(NULL)}
 				  	)
 				  })
@@ -77,11 +77,11 @@ load_all_timeseries <- function(base_dir = NULL, date = NULL, ts_type = "R") {
 #'
 #' @examples
 #' NULL
-#' @export 
+#' @export
 #' @references
 #' NULL
 
-load_single_timeseries <- function(base_dir, region, date = NULL, 
+load_single_timeseries <- function(base_dir, region, date = NULL,
 								   ts_type = NULL) {
 
 	if (is.null(date)) {
@@ -89,7 +89,7 @@ load_single_timeseries <- function(base_dir, region, date = NULL,
 		date <-  as.Date(list.files(file_dir))
 		date <- max(date)
 	}
-	
+
 	file_dir <- file.path(base_dir, region, date)
 
 	if (ts_type == "R") {
@@ -103,7 +103,7 @@ load_single_timeseries <- function(base_dir, region, date = NULL,
 
 		file_path <- file.path(file_dir, "summarised_nowcast.rds")
 		df <- readRDS(file_path)
-		df <- df[df$type == "nowcast", 
+		df <- df[df$type == "nowcast",
 			     colnames(df) %in% c("date", "median")]
 		df <- cbind(df, region = region)
 	}
@@ -114,26 +114,26 @@ load_single_timeseries <- function(base_dir, region, date = NULL,
 #' @title Extract Predictive Samples From Stanobject
 #'
 #' @description
-#' Extract preditive samples and bring them in a format that 
-#' can be used for scoring. Function needs to be updated to 
+#' Extract preditive samples and bring them in a format that
+#' can be used for scoring. Function needs to be updated to
 #' deal with more than one predictive parameter?
 #'
 #' @param stanfitobject a stanfitobject
 #' @param predictive TRUE indicates that you want to extract
 #' predictive values, FALSE returns fitted values
-#' 
+#'
 #' @return
 #' a matrix of dimension nxN with predictive samples.
 #' n is the number of predicted values, N is the number of
-#' MCMC samples for each value to be predicted. 
+#' MCMC samples for each value to be predicted.
 #'
 #' @importFrom rstan extract
 #'
 #' @examples
 #' NULL
-#' @export 
+#' @export
 
-extract_samples <- function(stanfitobject, 
+extract_samples <- function(stanfitobject,
 							type = "predictive") {
 
 	samples <- rstan::extract(stanfitobject)
@@ -146,7 +146,7 @@ extract_samples <- function(stanfitobject,
 	} else if (type == "fit") {
 		samples <- samples[grep("_fit", params)]
 	}
-	
+
 	if (length(samples) > 1) {}
 
 	return(t(samples[[1]]))
@@ -158,13 +158,13 @@ extract_samples <- function(stanfitobject,
 #' @title Iteratively fit a model to the data
 #'
 #' @description
-#' 
-#' @param incidences Vector of length n with the past incidences used to 
-#' fit the model and make predictions. 
-#' @param n_pred prediction horizon, i.e. number of days to predict into the 
+#'
+#' @param incidences Vector of length n with the past incidences used to
+#' fit the model and make predictions.
+#' @param n_pred prediction horizon, i.e. number of days to predict into the
 #' future
 #' @param interval interval between predictions. Maybe delete?
-#' @param max_n_past_obs maximum number of past observations to take into 
+#' @param max_n_past_obs maximum number of past observations to take into
 #' account
 #'
 #' @return
@@ -174,33 +174,35 @@ extract_samples <- function(stanfitobject,
 #'
 #' @examples
 #' NULL
-#' @export 
+#' @export
 #' @references
 #' NULL
 
 
-fit_iteratively <- function(data, 
+fit_iteratively <- function(data,
 							country,
-							incidences, 
-							n_pred = 14, 
-							interval = NULL,
-							start_period = 8,
 							max_n_past_obs = Inf,
 							model = "bsts",
 							n_samples = 4000,
 							vb = FALSE,
-							fit_type = "stan",
+							fit_type = "bsts_package",
 							length_local_trend = 7,
 							iter = 4000,
 							...) {
+
+	inputdata <- data$inputdata
+	y = inputdata[inputdata$region == country,
+				   		   colnames(inputdata) == "median"]
+	n_pred = data$n_pred
+	start_period = data$start_period
+
+
 	## track time
 	time <- Sys.time()
 
-	if (is.null(interval)) interval <- n_pred
-
 	## calculate number of fits to do
-	total_n <- (length(incidences))
-	n_runs <- ceiling((total_n - (start_period - 1)) / interval)
+	total_n <- (length(y))
+	n_runs <- ceiling((total_n - (start_period - 1)) / n_pred)
 
 	## initialize empty lists to hold the results
 
@@ -222,32 +224,32 @@ fit_iteratively <- function(data,
 			current_earliest_obs <- length(index) - max_n_past_obs + 1
 			index <- index[current_earliest_obs:current_last_obs]
 		}
-		y <- incidences[index]
+		y_curr <- y[index]
 		i <- i + 1
 
 		if (fit_type == "stan") {
-			stanfit <- fit_stan_model(y, model, n_pred = n_pred, vb = vb, 
-								      length_local_trend = length_local_trend, 
+			stanfit <- fit_stan_model(y_curr, model, n_pred = n_pred, vb = vb,
+								      length_local_trend = length_local_trend,
 								      iter = iter)
 
 			## store results
 			stanfitobjects[[i]] <- stanfit
 			predictive_samples[[i]] <- extract_samples(stanfit)
 		} else {
-			predictive_samples[[i]] <- bsts_wrapper(y, model, 
+			predictive_samples[[i]] <- bsts_wrapper(y, model,
 									   num_pred  = n_pred)
 		}
 
 		forecast_run[[i]] <- rep(i, nrow(predictive_samples[[i]]))
-										 
-		current_last_obs <- current_last_obs + interval
+
+		current_last_obs <- current_last_obs + n_pred
 	}
 
 
     predictive_samples <- do.call("rbind", predictive_samples)
     forecast_run <- do.call("c", forecast_run)
 
-    ## cap predictions to match the length of the 
+    ## cap predictions to match the length of the
     ## true_values minus the starting data
     last_n_to_display <- nrow(predictive_samples) - (current_last_obs - total_n)
 	predictive_samples <- predictive_samples[1:last_n_to_display, ]
@@ -259,20 +261,20 @@ fit_iteratively <- function(data,
 			current_earliest_obs <- length(index) - max_n_past_obs + 1
 			index <- index[current_earliest_obs:total_n]
 		}
-	y <- incidences[index]
+	y_curr <- y[index]
 	i <- i + 1
 	if (fit_type == "stan") {
-			stanfit <- fit_stan_model(y, model, 
-							  n_pred = n_pred, 
-							  vb = vb, 
+			stanfit <- fit_stan_model(y, model,
+							  n_pred = n_pred,
+							  vb = vb,
 							  iter = iter,
 							  length_local_trend = length_local_trend)
 
 			stanfitobjects[[i]] <- stanfit
-			predictive_samples <- rbind(predictive_samples, 
+			predictive_samples <- rbind(predictive_samples,
 								     	extract_samples(stanfit))
 		} else {
-			predictive_samples <- rbind(predictive_samples,			
+			predictive_samples <- rbind(predictive_samples,
 										bsts_wrapper(y, model,
 												     num_pred  = n_pred))
 		}
@@ -280,18 +282,18 @@ fit_iteratively <- function(data,
 	forecast_run <- c(forecast_run, rep(i, n_pred))
 
     ## add NAs to the predictions and the true_values
-    predictive_samples <- rbind(matrix(NA, nrow = start_period - 1, 
-    									   ncol = ncol(predictive_samples)), 
+    predictive_samples <- rbind(matrix(NA, nrow = start_period - 1,
+    									   ncol = ncol(predictive_samples)),
 								predictive_samples)
-    y <- c(incidences, rep(NA, n_pred))
+    y <- c(y, rep(NA, n_pred))
     forecast_run <- c(rep(NA, start_period - 1), forecast_run)
 
 
 	print(Sys.time() - time)
-	return(list(predictive_samples = predictive_samples, 
-		        forecast_run = forecast_run, 
-		        stanfitobjects = stanfitobjects, 
-		    	y = y)) 
+	return(list(predictive_samples = predictive_samples,
+		        forecast_run = forecast_run,
+		        stanfitobjects = stanfitobjects,
+		    	y = y))
 
 }
 
@@ -302,14 +304,14 @@ fit_iteratively <- function(data,
 #' @description
 #' Wrapper around different lower level fit functions
 #' @param y Vector of length n with the true values
-#' fit the model and make predictions. 
+#' fit the model and make predictions.
 #' @param model Missing
-#' 
+#'
 #' @return
 #' Missing
 #' @examples
 #' NULL
-#' @export 
+#' @export
 
 predict_with_model <- function(y, model, num_pred, stan = F) {
 
@@ -328,39 +330,39 @@ predict_with_model <- function(y, model, num_pred, stan = F) {
 #' @description
 #' Wrapper around different lower level fit functions
 #' @param y Vector of length n with the true values
-#' fit the model and make predictions. 
+#' fit the model and make predictions.
 #' @param model Missing
-#' 
+#'
 #' @return
 #' Missing
 #' @examples
 #' NULL
-#' @export 
+#' @export
 
-fit_stan_model <-function(y, model, n_pred, vb, 
+fit_stan_model <-function(y, model, n_pred, vb,
 						  iter = 4000,
 	                      length_local_trend, ...) {
 
 	if (class(model) == "character" && model == "lin_reg") {
-		stanfit <- epipredictr::linear_regression(y = y, 
-												  num_pred = n_pred, 
+		stanfit <- epipredictr::linear_regression(y = y,
+												  num_pred = n_pred,
 												  x = 1:length(y))
 		} else if (class(model) == "character" && model == "bsts") {
 			stanfit <- bsts(y = y,
-							num_pred = n_pred, 
+							num_pred = n_pred,
 							prior_var_phi = 0.5)
 		} else if (class(model) == "character" && model == "bsts_local_trend") {
 			stanfit <- bsts_local_trend(y = y,
-							num_pred = n_pred, 
+							num_pred = n_pred,
 							length_local_trend = length_local_trend,
 							prior_var_phi = 0.5)
 		} else {
-			l <- list(y = y, N = length(y), 
+			l <- list(y = y, N = length(y),
 					  n_pred = n_pred, prior_var_phi = 0.5, x = 1:length(y),
-					  length_local_trend = 5, num_pred = n_pred, 
+					  length_local_trend = 5, num_pred = n_pred,
 					  mean_phi = 1)
-			stanfit <- rstan::sampling(model, data = l, 
-                        	iter = iter, thin = 1, 
+			stanfit <- rstan::sampling(model, data = l,
+                        	iter = iter, thin = 1,
                         	control = list(adapt_delta = 0.99))
 		}
 }
@@ -372,39 +374,39 @@ fit_stan_model <-function(y, model, n_pred, vb,
 #' @title Plot predictive samples vs. true values
 #'
 #' @description
-#' Missing. 
+#' Missing.
 #' Also Todo: add an option for point estimates
 #' get the forecast_run thing tidy
 #' @param y_true Vector of length n with the true values
-#' fit the model and make predictions. 
+#' fit the model and make predictions.
 #' @param y_pred_samples predictive samples
-#' @param forecast_run vector indicating which forecast run an 
+#' @param forecast_run vector indicating which forecast run an
 #' esimtate belongs to
-#' 
+#'
 #' @return
 #' Missing
 #' @examples
 #' NULL
-#' @export 
+#' @export
 
 
 
-plot_pred_vs_true <- function(y_true, 
+plot_pred_vs_true <- function(y_true,
 							  y_pred_samples,
-							  forecast_run,	
-							  vlines = T, 
+							  forecast_run,
+							  vlines = T,
 							  plottitle = "Pred vs. True"){
 	pred_mean <- rowMeans(y_pred_samples)
 	pred_median <- apply(y_pred_samples, median, MARGIN = 1)
-	pred_quantiles <- t(apply(y_pred_samples, 
-								MARGIN = 1, 
-								FUN = quantile, 
-								probs = c(0.025, 0.25, 0.75, 0.975), 
+	pred_quantiles <- t(apply(y_pred_samples,
+								MARGIN = 1,
+								FUN = quantile,
+								probs = c(0.025, 0.25, 0.75, 0.975),
 							    na.rm = TRUE))
 
-	df <- as.data.frame(cbind(y_true, pred_median, 
+	df <- as.data.frame(cbind(y_true, pred_median,
 							  pred_mean, pred_quantiles, forecast_run))
-	colnames(df) <- c("true", "median", "mean", "ci2.5", 
+	colnames(df) <- c("true", "median", "mean", "ci2.5",
 					  "ci25", "ci75", "ci97.5", "forecast_run")
 
 	start_data <- sum(is.na(forecast_run))
@@ -424,10 +426,10 @@ plot_pred_vs_true <- function(y_true,
 	}
 
 	plot <- ggplot(df, aes(x = 1:nrow(df)), group = forecast_run) +
-			geom_ribbon(aes(ymin =ci2.5, ymax = ci97.5), alpha = 0.5, 
+			geom_ribbon(aes(ymin =ci2.5, ymax = ci97.5), alpha = 0.5,
 						fill = "gray") +
-			geom_ribbon(aes(ymin = ci25, ymax = ci75), alpha = 0.7, 
-						fill = "gray") + 
+			geom_ribbon(aes(ymin = ci25, ymax = ci75), alpha = 0.7,
+						fill = "gray") +
 			geom_line(aes(y = median), color = "darkgray", size=1) +
 			geom_point(aes(y = median), color = "black", size=6) +
 			geom_line(aes(y = true), size=1, color = "darkgray") +
@@ -445,15 +447,15 @@ plot_pred_vs_true <- function(y_true,
 #' @title Plot prior vs posterior distribution of parameters
 #'
 #' @description
-#' Missing. 
-#' Also Todo: handling for only one item 
+#' Missing.
+#' Also Todo: handling for only one item
 #' @param stanfitobjects list of stanfit objects
-#' 
+#'
 #' @return
 #' Missing
 #' @examples
 #' NULL
-#' @export 
+#' @export
 
 plot_prior_vs_posterior <- function(stanfitobjects) {
 	if (is.list(stanfitobjects)) {
@@ -469,19 +471,19 @@ plot_prior_vs_posterior <- function(stanfitobjects) {
 		prior_samples <- samples[prior_params]
 		post_samples <- samples[post_params]
 
-		df_prior <- lapply(seq_along(prior_samples), 
+		df_prior <- lapply(seq_along(prior_samples),
                    FUN = function(i) {
-                     data.frame(samples = as.vector(prior_samples[[i]]), 
-		   						type = c("prior"), 
-		   						name = post_params[i], 
+                     data.frame(samples = as.vector(prior_samples[[i]]),
+		   						type = c("prior"),
+		   						name = post_params[i],
 		   					    run = run)
                    })
 
-		df_post <- lapply(seq_along(post_samples), 
+		df_post <- lapply(seq_along(post_samples),
                    FUN = function(i) {
-                     data.frame(samples = as.vector(post_samples[[i]]), 
-		   						type = c("posterior"), 
-		   						name = post_params[i], 
+                     data.frame(samples = as.vector(post_samples[[i]]),
+		   						type = c("posterior"),
+		   						name = post_params[i],
 		   						run = run)
                    })
 
@@ -491,8 +493,8 @@ plot_prior_vs_posterior <- function(stanfitobjects) {
 		return(df)
 	}
 
-	dataframes <- lapply(seq_along(stanfitobjects), 
-						 FUN = function(i) { 
+	dataframes <- lapply(seq_along(stanfitobjects),
+						 FUN = function(i) {
 						 	make_prior_post_df(stanfitobjects[[i]], run = i)
 						 })
 
@@ -502,7 +504,7 @@ plot_prior_vs_posterior <- function(stanfitobjects) {
 	maxx <- max(df[df$type == "posterior", ]$samples)
 	plot <- ggplot(df, mapping = aes(x = samples, fill = type)) +
 				geom_density(alpha = 0.7, position = "identity") +
-				facet_grid(run ~ name, scales = "free_y") + 
+				facet_grid(run ~ name, scales = "free_y") +
 				xlim(c(minx, maxx)) +
 				theme(text = element_text(family = 'Serif'))
 
@@ -513,29 +515,29 @@ plot_prior_vs_posterior <- function(stanfitobjects) {
 #' @title Wrapper around the functions from the bsts package
 #'
 #' @description
-#' Missing. 
-#' Also Todo: handling for only one item 
-#' @param y 
-#' 
+#' Missing.
+#' Also Todo: handling for only one item
+#' @param y
+#'
 #' @return
 #' Missing
 #' @examples
 #' NULL
-#' @export 
+#' @export
 
 bsts_wrapper <- function(y, model,
-						 num_pred = 7, 
+						 num_pred = 7,
 						 n_iter = 2000) {
 	if (model == "semilocal") {
-		ss <- AddSemilocalLinearTrend(list(), y)	
+		ss <- AddSemilocalLinearTrend(list(), y)
 	} else if (model == "local"){
-		ss <- AddLocalLinearTrend(list(), y)	
+		ss <- AddLocalLinearTrend(list(), y)
 	} else if (model == "local_student"){
-		ss <- AddStudentLocalLinearTrend(list(), y)	
+		ss <- AddStudentLocalLinearTrend(list(), y)
 	} else if (model == "ar1"){
-		ss <- AddAr(list(), y, lags = 1) 
+		ss <- AddAr(list(), y, lags = 1)
 	} else if (model == "ar2"){
-		ss <- AddAr(list(), y, lags = 2) 
+		ss <- AddAr(list(), y, lags = 2)
 	}
 
 	bsts.model <- bsts::bsts(y, state.specification = ss, niter = 1000, ping=0)
@@ -551,25 +553,25 @@ bsts_wrapper <- function(y, model,
 #' @title Wrapper to make a visual plot to compare the outputs of do_all_fits
 #'
 #' @description
-#' Missing. 
-#' Also Todo: handling for only one item 
-#' @param y 
-#' 
+#' Missing.
+#' Also Todo: handling for only one item
+#' @param y
+#'
 #' @return
 #' Missing
 #' @examples
 #' NULL
-#' @export 
+#' @export
 
 
 plot_forecast_compare <- function(pred_results) {
 	titles <- names(pred_results)
-	plots <- lapply(seq_along(pred_results), 
+	plots <- lapply(seq_along(pred_results),
 					FUN = function (i) {
 						plot_pred_vs_true(
-						 y_pred_samples = pred_results[[i]]$predictive_samples, 
-						 y_true = pred_results[[i]]$y, 
-						 forecast_run = pred_results[[i]]$forecast_run, 
+						 y_pred_samples = pred_results[[i]]$predictive_samples,
+						 y_true = pred_results[[i]]$y,
+						 forecast_run = pred_results[[i]]$forecast_run,
 						 plottitle = titles[i]
 						)
 			        })
@@ -583,21 +585,21 @@ plot_forecast_compare <- function(pred_results) {
 #' @title Wrapper to compare forecasts
 #'
 #' @description
-#' Missing. 
-#' Also Todo: handling for only one item 
-#' @param y 
-#' 
+#' Missing.
+#' Also Todo: handling for only one item
+#' @param y
+#'
 #' @return
 #' Missing
 #' @examples
 #' NULL
-#' @export 
+#' @export
 
 
 
 compare_forecasts <- function(region_results = NULL) {
 	titles <- names(region_results)
-	scores <- lapply(seq_along(region_results), 
+	scores <- lapply(seq_along(region_results),
 					 FUN = function (i) {
 					 	y <- region_results[[i]]$y
 					 	pred <- region_results[[i]]$predictive_samples
@@ -608,9 +610,9 @@ compare_forecasts <- function(region_results = NULL) {
 
 
 					 	tmp <- scoringutils::eval_forecasts(
-					 			true_values = y, 
-					 			predictions = pred, 
-					 			prediction_type = "probabilistic", 
+					 			true_values = y,
+					 			predictions = pred,
+					 			prediction_type = "probabilistic",
 					 			outcome_type = "continuous")
 					 	return(cbind(tmp, model = titles[i]))
 					 })
@@ -633,27 +635,27 @@ compare_forecasts <- function(region_results = NULL) {
 #' @title Wrapper to select the best bsts model from the package
 #'
 #' @description
-#' Missing. 
-#' Also Todo: handling for only one item 
-#' @param y 
-#' 
+#' Missing.
+#' Also Todo: handling for only one item
+#' @param y
+#'
 #' @return
 #' Missing
 #' @examples
 #' NULL
-#' @export 
+#' @export
 
 
 
 compare_bsts_models <- function(y) {
 	bsts <- list()
 
-	ss1 <- AddSemilocalLinearTrend(list(), y)	
-	ss2 <- AddLocalLinearTrend(list(), y)	
-	ss3 <- AddStudentLocalLinearTrend(list(), y)	
-	ss4 <- AddAr(list(), y, lags = 1) 
-	ss5 <- AddAr(list(), y, lags = 2) 
-	
+	ss1 <- AddSemilocalLinearTrend(list(), y)
+	ss2 <- AddLocalLinearTrend(list(), y)
+	ss3 <- AddStudentLocalLinearTrend(list(), y)
+	ss4 <- AddAr(list(), y, lags = 1)
+	ss5 <- AddAr(list(), y, lags = 2)
+
 	bsts$semilocal <- bsts::bsts(y, state.specification = ss1, niter = 1000, ping=0)
 	bsts$local <- bsts::bsts(y, state.specification = ss2, niter = 1000, ping=0)
 	bsts$local_student <- bsts::bsts(y, state.specification = ss3, niter = 1000, ping=0)
@@ -669,28 +671,28 @@ compare_bsts_models <- function(y) {
 #' @title Extract summary data.frame from forecasts
 #'
 #' @description
-#' Missing. 
-#' Also Todo: handling for only one item 
-#' @param y 
-#' 
+#' Missing.
+#' Also Todo: handling for only one item
+#' @param y
+#'
 #' @return
 #' Missing
 #' @examples
 #' NULL
-#' @export 
+#' @export
 
 forecast_table <- function(pred_result, country = "country") {
 	pred <- pred_result$predictive_samples[is.na(pred_result$y), ]
 
 	median_3 <- median(pred[3, ])
 	mean_3 <- median(pred[3, ])
-	quantiles_3 <- quantile(pred[3, ], c(0.025, 0.25, 0.75, 0.975))	
+	quantiles_3 <- quantile(pred[3, ], c(0.025, 0.25, 0.75, 0.975))
 
-	df <- data.frame(country = country, 
-					 median_3 = median_3, 
-					 mean_3 = mean_3, 
-					 "quantile_2.5" = quantiles_3[1], 
-					 "quantile_25" = quantiles_3[2], 
+	df <- data.frame(country = country,
+					 median_3 = median_3,
+					 mean_3 = mean_3,
+					 "quantile_2.5" = quantiles_3[1],
+					 "quantile_25" = quantiles_3[2],
 					 "quantile_75" = quantiles_3[3],
 					 "quantile_97.5" = quantiles_3[4])
 	rownames(df) <- country
@@ -705,15 +707,15 @@ forecast_table <- function(pred_result, country = "country") {
 #' @title Predict Cases implied by the R_t predictions
 #'
 #' @description
-#' Missing. 
-#' Also Todo: handling for only one item 
-#' @param y 
-#' 
+#' Missing.
+#' Also Todo: handling for only one item
+#' @param y
+#'
 #' @return
 #' Missing
 #' @examples
 #' NULL
-#' @export 
+#' @export
 
 # make_case_prediction <- function(region_results, data = data, region = NULL) {
 
@@ -724,14 +726,14 @@ forecast_table <- function(pred_result, country = "country") {
 
 # 	forecast_run <- region_results[[1]]$forecast_run
 # 	r_true <- region_results[[1]]$y
-	
+
 # 	runs <- unique(forecast_run[!is.na(forecast_run)])
 
 # 	## find parts of the incidence time series that are relevant
-	
+
 # 	nrow(incidences[(n_pred +1):nrow(incidences), ])
 
-	
+
 
 
 
@@ -745,6 +747,6 @@ forecast_table <- function(pred_result, country = "country") {
 # 		}
 
 # 	}
-		
+
 
 # }

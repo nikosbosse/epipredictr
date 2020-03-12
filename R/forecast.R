@@ -150,6 +150,8 @@ analysis_one_country <- function(data, country = "country", plot = F) {
 	inputdata <- data$inputdata
 	y <- inputdata[inputdata$region == country, 
 				   colnames(inputdata) == "median"]
+	dates <- inputdata[inputdata$region == country, 
+				   colnames(inputdata) == "date"]
 	
 	out <- list()
 	out$country <- country
@@ -165,8 +167,7 @@ analysis_one_country <- function(data, country = "country", plot = F) {
 		name <- paste("bsts_", model, sep = "")
 		out$region_results[[name]] <- fit_iteratively(data, country = country, 
 									      incidences = y,
-									      model = model, n_pred = n_pred,
-									      start_period = start_period,
+									      model = model, 
 									      fit_type = "bsts_package")
 	}
 

@@ -52,9 +52,13 @@ source("../R/forecast.R")
 
 
 ```{r load-data, include=FALSE}
-inputdata <- load_all_timeseries(base_dir = "../data/Rt_estimates", 
-                                 date = as.Date("2020-03-09"))
+
+inputdata <- load_all_timeseries(base_dir = "../data/Rt_estimates", date = as.Date("2020-03-09"))
 inputdata <- inputdata[1:17, ]
+incidences <- load_all_timeseries(base_dir = "../data/Rt_estimates", 
+                                  date = as.Date("2020-03-09"), 
+                                  ts_type = "incidences")
+
 
 
 ```
@@ -62,14 +66,13 @@ inputdata <- inputdata[1:17, ]
 ```{r do-analysis, include=FALSE}
 
 models <- c("local", "semilocal", "local_student", "ar1", "ar2")
-
-data <- list(inputdata = inputdata, 
+data <- list(inputdata = inputdata,
+             last_date = max(inputdata$date),
              models = models,
+             incidences = incidences,
              n_pred = 7,
              start_period = 4)
 
-source("../R/utilities.R")
-source("../R/forecast.R")
 analysis <- full_analysis(data)
 
 prediction_results <- lapply(
@@ -81,6 +84,8 @@ prediction_results <- lapply(
     forecast_table(region_res, region)
   }
 )
+
+analysis$all_region_results$austria$region_results$bsts_local$
 
 summary_prediction_result <- do.call(rbind, prediction_results)
 
