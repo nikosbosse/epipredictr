@@ -31,6 +31,7 @@ full_analysis <- function(data) {
 				  			warning(cond)
 				  			warning(paste("Issue with region", countries[i]))
 				  			return(NULL)
+
 				  		}
 				  	)
 				  	return(out)
@@ -85,7 +86,7 @@ full_analysis <- function(data) {
 
 
 
-	## find best model and make separate predictin plots ============ #
+	## find best model and make separate plots ================== #
 	best <- as.character(table_mean[1, colnames(table_mean) == "model"])
 
 	predictions_best <- list()
@@ -106,8 +107,6 @@ full_analysis <- function(data) {
 		predictions_best[[country]] <- p
 	}
 	## ========================================================== #
-
-	## make case predictions with best model ============ #
 
 
 
@@ -163,8 +162,7 @@ analysis_one_country <- function(data, country = "country", plot = F) {
 	out$region_results <- list()
 	for (model in models) {
 		name <- paste("bsts_", model, sep = "")
-		out$region_results[[name]] <- fit_iteratively(data, country = country, 
-									      incidences = y,
+		out$region_results[[name]] <- fit_iteratively(incidences = y,
 									      model = model, n_pred = n_pred,
 									      start_period = start_period,
 									      fit_type = "bsts_package")
@@ -241,39 +239,42 @@ add_average_model <- function(region_results) {
 }
 
 
-# add_stacked_model <- function(region_results) {
+add_stacked_model <- function(region_results) {
 
 
-# 	models <- names(region_results)
-
-# 	scores <- sapply()
-
-
-# 	model <- "bsts_local"
-
-# 	# get scores across all models
-# 	scores <- 0
-# 	for (model in models) {
-
-# 		model_results <- region_results[[model]]
-# 		forecast_run <- model_results$forecast_run
-# 		predictive_samples <- model_results$predictive_samples
-# 		y <- model_results$y
-
-# 		runs <- unique(forecast_run[!is.na(forecast_run)])
-# 		index <- forecast_run == runs[1]
-# 		index[is.na(index)] <- FALSE
-		
-# 		crps <- scoringutils::crps(y[index], predictive_samples[index,])
-		
-# 		scores <- cbind(scores, crps)
-# 	} 
-# 	colnames(scores) <- c("y", models)
-# 	scores <- as.data.frame(scores)
-
-# 	lm(y ~ . , data = scores)
-
-# 	lm(scores)
 	
 
-# }
+	scores <- sapply()
+
+	# get scores for 1
+
+	
+
+	m <- region_results[[1]]
+	predictive_samples <- m$predictive_samples
+
+	runs <- unique(forecast_run[!is.na(forecast_run)])
+	index <- forecast_run == runs[1]
+	index[is.na(index)] <- FALSE
+	
+	predictive_samples[index, 1:5]
+
+
+
+
+	tmp <- lapply(seq_along(region_results), 
+				  FUN = function(i) {
+				  	p <- region_results[[i]]
+				  	p <- p$predictive_samples
+				  	return(p)
+				  })
+	pred <- tmp[[1]]
+	for (i in 2:length(region_results)) {
+		pred <- pred + tmp[[i]] 
+	}
+	avg <- pred / length(region_results)
+	region_results$average$predictive_samples <- avg
+	region_results$average$y <- region_results[[1]]$y
+	region_results$average$forecast_run <- region_results[[1]]$forecast_run
+	return(region_results)
+}

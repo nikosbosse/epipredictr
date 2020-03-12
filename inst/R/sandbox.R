@@ -1,7 +1,4 @@
-library(epipredictr)
-library(rstan)
-options(mc.cores = 4)
-rstan_options(auto_write = TRUE)
+library(ggplot2)
 library(scoringutils)
 options(width=as.integer(160))
 library(dplyr)
@@ -9,13 +6,6 @@ library(cowplot)
 library(patchwork)
 library(bsts)
 par(family = "Serif")
-
-# inc <- epipredictr::get_data()
-# ts <- inc$daily
-# fit <- epipredictr::linear_regression(y = ts)
-# p <- extract_samples(fit, predictive = F)
-# scoringutils::eval_forecasts(true_values = ts, predictions = p)
-# a <- fit_iteratively(ts)
 
 source("R/utilities.R")
 source("R/forecast.R")
@@ -25,72 +15,19 @@ source("R/forecast.R")
 #
 # ======================================================== #
 
-
-# sk <- readRDS("data/time_varying_params_south_korea.rds")[[1]]
-# it <- readRDS("data/time_varying_params_italy.rds")[[1]]
-# # uk <- readRDS("data/time_varying_params_uk.rds")[[1]]
-# jp <- readRDS("data/time_varying_params_japan.rds")[[1]]
-# sp <- readRDS("data/time_varying_params_singapore.rds")[[1]]
-
-# y_sk <- sk$median[1:10]
-# y_jp <- jp$median[1:10]
-# y_sp <- sp$median[1:10]
-# y_it <- it$median[1:10]
-# timeseries <- list(y_sk, y_jp, y_sp, y_it)
-# countries <- c("South_Korea", "Japan", "Singapore", "Italy")
 models <- c("local", "semilocal", "local_student", "ar1", "ar2")
-
-# timeseries <- list(y_sk, y_jp, y_sp, y_it)
-# countries <- c("South_Korea", "Japan", "Singapore", "Italy")
-# models <- c("local", "semilocal", "local_student", "ar1", "ar2")
-
 inputdata <- load_all_timeseries(date = as.Date("2020-03-09"))
 inputdata <- inputdata[1:17, ]
+incidences <- load_all_timeseries(date = as.Date("2020-03-09"), ts_type = "incidences")
 
 data <- list(inputdata = inputdata, 
+			 last_date = max(inputdata$date),
              models = models,
+             incidences = incidences,
              n_pred = 7,
              start_period = 4)
 
 analysis <- full_analysis(data)
-
-
-region_results <- analysis$all_region_results$austria$region_results
-
-source("R/utilities.R")
-source("R/forecast.R")
-
-
-
-
-
-
-
-
-a <- list.files("data/Rt_estimates/austria")
-
-max(as.Date(a))
-
-
-results_dir <- "data/Rt_estimates/"
-
-
-
-	for (region in regions) {
-		file_dir <- paste(results_dir, region, sep = "")
-
-
-
-df <- load_all_timeseries(base_dir = "data/Rt_estimates", regions = regions, 
-						  date = as.Date("2020-03-09"))
-
-regions <- df$region
-
-
-load_single_timeseries("data/Rt_estimates/", region, date)
-
-
-
 
 
 

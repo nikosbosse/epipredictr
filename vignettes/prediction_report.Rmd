@@ -72,23 +72,17 @@ source("../R/utilities.R")
 source("../R/forecast.R")
 analysis <- full_analysis(data)
 
-analysis$country_results$austria$region_results
-
-
 prediction_results <- lapply(
   seq_along(analysis$countries),
   FUN = function(i) {
     region <- analysis$countries[i]
     region_res <-
-      analysis$country_results[[region]]$region_results$average
+      analysis$all_region_results[[region]]$region_results$average
     forecast_table(region_res, region)
   }
 )
 
 summary_prediction_result <- do.call(rbind, prediction_results)
-
-analysis$
-
 
 ```
 

@@ -41,8 +41,7 @@ get_data <- function() {
 #' @references
 #' NULL
 
-
-load_all_timeseries <- function(base_dir = NULL, date = NULL) {
+load_all_timeseries <- function(base_dir = NULL, date = NULL, ts_type = "R") {
 
 	if (is.null(base_dir)) {
 		base_dir <- "data/Rt_estimates"
@@ -55,12 +54,15 @@ load_all_timeseries <- function(base_dir = NULL, date = NULL) {
 				  	tryCatch(
 				  	{ load_single_timeseries(base_dir, 
 				  							   regions[i], 
-				  							   date)
+				  							   date, 
+				  							 ts_type = ts_type)
 				  	}, 
 				  	error=function(cond) {return(NULL)}
 				  	)
 				  })
 	dfs <- do.call(rbind, dfs)
+
+
 	return(dfs)
 }
 
@@ -79,7 +81,8 @@ load_all_timeseries <- function(base_dir = NULL, date = NULL) {
 #' @references
 #' NULL
 
-load_single_timeseries <- function(base_dir, region, date = NULL) {
+load_single_timeseries <- function(base_dir, region, date = NULL, 
+								   ts_type = NULL) {
 
 	if (is.null(date)) {
 		## find latest date
@@ -89,16 +92,22 @@ load_single_timeseries <- function(base_dir, region, date = NULL) {
 	
 	file_dir <- file.path(base_dir, region, date)
 
-	file_path <- file.path(file_dir, "time_varying_params.rds")
+	if (ts_type == "R") {
+		file_path <- file.path(file_dir, "time_varying_params.rds")
 
-	try
-	df <- readRDS(file_path)[[1]]
-	df <- df[, colnames(df) %in% c("date", "median")]
-	df <- cbind(df, region = region)
-	return(df)
+		df <- readRDS(file_path)[[1]]
+		df <- df[, colnames(df) %in% c("date", "median")]
+		df <- cbind(df, region = region)
+		return(df)
+	} else if (ts_type == "incidences") {
 
+		file_path <- file.path(file_dir, "summarised_nowcast.rds")
+		df <- readRDS(file_path)
+		df <- df[df$type == "nowcast", 
+			     colnames(df) %in% c("date", "median")]
+		df <- cbind(df, region = region)
+	}
 }
-
 
 
 
@@ -170,9 +179,9 @@ extract_samples <- function(stanfitobject,
 #' NULL
 
 
-
-
-fit_iteratively <- function(incidences, 
+fit_iteratively <- function(data, 
+							country,
+							incidences, 
 							n_pred = 14, 
 							interval = NULL,
 							start_period = 8,
@@ -586,7 +595,7 @@ plot_forecast_compare <- function(pred_results) {
 
 
 
-compare_forecasts <- function (region_results) {
+compare_forecasts <- function(region_results = NULL) {
 	titles <- names(region_results)
 	scores <- lapply(seq_along(region_results), 
 					 FUN = function (i) {
@@ -633,6 +642,8 @@ compare_forecasts <- function (region_results) {
 #' @examples
 #' NULL
 #' @export 
+
+
 
 compare_bsts_models <- function(y) {
 	bsts <- list()
@@ -690,3 +701,50 @@ forecast_table <- function(pred_result, country = "country") {
 
 
 
+
+#' @title Predict Cases implied by the R_t predictions
+#'
+#' @description
+#' Missing. 
+#' Also Todo: handling for only one item 
+#' @param y 
+#' 
+#' @return
+#' Missing
+#' @examples
+#' NULL
+#' @export 
+
+# make_case_prediction <- function(region_results, data = data, region = NULL) {
+
+# 	n_pred <- data$n_pred
+# 	incidences <- data$incidences
+# 	incidences <- incidences[incidences$region == region, ]
+# 	models <- names(region_results)
+
+# 	forecast_run <- region_results[[1]]$forecast_run
+# 	r_true <- region_results[[1]]$y
+	
+# 	runs <- unique(forecast_run[!is.na(forecast_run)])
+
+# 	## find parts of the incidence time series that are relevant
+	
+# 	nrow(incidences[(n_pred +1):nrow(incidences), ])
+
+	
+
+
+
+# 	for (run in runs) {
+# 		for (model in models) {
+
+# 			model_results <- region_results[[model]]
+# 			predictive_samples <- model_results$predictive_samples
+# 			index <- forecast_run == run
+# 			index[is.na(index)] <- FALSE
+# 		}
+
+# 	}
+		
+
+# }
