@@ -71,7 +71,7 @@ source("../R/forecast.R")
 
 inputdata <- load_all_timeseries(base_dir = "../data/Rt_estimates", 
                                  date = as.Date("2020-03-09"))
-inputdata <- inputdata[1:17, ]
+inputdata
 
 
 ```
@@ -134,9 +134,9 @@ knitr::kable(summary_prediction_result[,-1])
 ## Abstract
 
 ## Methods
-We used three different models
+We used different Bayesian Structural Time Series models
 
-1. windowed regression
+1. Local Trend
 2. BSTS with a global trend
 3. BSTS with a local trend
 4. BSTS with an AR 1
@@ -180,7 +180,7 @@ knitr::kable(analysis$scoring$scores_ranked_mean)
 
 #### Prediction vs. Actual
 
-```{r South-Korea, fig.width=10, fig.height=11}
+```{r South-Korea, fig.width=10, fig.height=18}
 analysis$country_results$South_Korea$forecast_plot
 
 ```
@@ -192,24 +192,24 @@ analysis$country_results$South_Korea$forecast_plot
 
 #### Prediction vs. Actual
 
-```{r Japan, fig.width=10, fig.height=11}
+```{r Japan, fig.width=10, fig.height=18}
 analysis$country_results$Japan$forecast_plot
 
 ```
 
-### Prediction Scores
+#### Prediction Scores
 
 
 ### Singapore {.tabset}
 
 #### Prediction vs. Actual
 
-```{r Singapore, fig.width=10, fig.height=11}
+```{r Singapore, fig.width=10, fig.height=18}
 analysis$country_results$Singapore$forecast_plot
 
 ```
 
-### Prediction Scores
+#### Prediction Scores
 
 
 
@@ -217,9 +217,9 @@ analysis$country_results$Singapore$forecast_plot
 
 #### Prediction vs. Actual
 
-```{r Italy, fig.width=10, fig.height=11}
+```{r Italy, fig.width=10, fig.height=18}
 analysis$country_results$Italy$forecast_plot
 
 ```
 
-### Prediction Scores
+#### Prediction Scores

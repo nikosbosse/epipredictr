@@ -14,7 +14,6 @@
 full_analysis <- function(data) {
 
 	inputdata <- data$inputdata
-#	timeseries <- data$timeseries
 	countries <- as.character(unique(inputdata$region))
 	models <- data$models
 
@@ -44,10 +43,8 @@ full_analysis <- function(data) {
 	res <- res[!failure]
 	countries <- countries[!failure]
 	names(res) <- countries
-
-	
-
 	## ================================================================ #
+
 
 	## scoring ================================================== #
 	## do aggregated scoring
@@ -107,11 +104,8 @@ full_analysis <- function(data) {
 							   y_pred_samples = predictive_samples,
 							   forecast_run = forecast_run, vlines = F,
 						  	   plottitle = t)
-
 		predictions_best[[country]] <- p
 	}
-
-
 	## ========================================================== #
 
 

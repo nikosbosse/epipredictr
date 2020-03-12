@@ -171,6 +171,7 @@ extract_samples <- function(stanfitobject,
 
 
 
+
 fit_iteratively <- function(incidences, 
 							n_pred = 14, 
 							interval = NULL,
@@ -414,14 +415,16 @@ plot_pred_vs_true <- function(y_true,
 	}
 
 	plot <- ggplot(df, aes(x = 1:nrow(df)), group = forecast_run) +
-			geom_ribbon(aes(ymin =ci2.5, ymax = ci97.5), alpha = 0.3, 
-						fill = "lightblue") +
-			geom_ribbon(aes(ymin = ci25, ymax = ci75), alpha = 0.9, 
-						fill = "lightblue") + 
-			geom_line(aes(y = median), color = "blue") +
-			geom_line(aes(y = true)) +
+			geom_ribbon(aes(ymin =ci2.5, ymax = ci97.5), alpha = 0.5, 
+						fill = "gray") +
+			geom_ribbon(aes(ymin = ci25, ymax = ci75), alpha = 0.7, 
+						fill = "gray") + 
+			geom_line(aes(y = median), color = "darkgray", size=1) +
+			geom_point(aes(y = median), color = "black", size=6) +
+			geom_line(aes(y = true), size=1, color = "darkgray") +
+			geom_point(aes(y = true), size=6, color = "black") +
 			ggtitle(plottitle) +
-			theme(text = element_text(family = 'Serif'))
+			theme(text = element_text(family = 'Sans Serif'))
 
 	if (isTRUE(vlines)) {
 		plot <- plot + geom_vline(aes(xintercept = vlines))
