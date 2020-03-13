@@ -49,8 +49,10 @@ full_analysis <- function(data) {
 	## scoring ================================================== #
 	## do aggregated scoring
 	scoring <- list()
-
-	tables <- lapply(all_region_results, '[[', 3)
+	tables <- lapply(all_region_results, 
+					 function(x) {
+					 	return(x[["scoring_table_region"]])
+					 })
 	tables <- lapply(seq_along(tables),
  					 FUN = function(i) {
  					 	cbind(country = countries[i], tables[[i]])
@@ -148,6 +150,8 @@ analysis_one_country <- function(data, country = "country", plot = F) {
 	inputdata <- data$inputdata
 	dates = inputdata[inputdata$region == country,	
 			      colnames(inputdata) == "date"]	
+
+
 
 	## do forecasting
 	# if (isTRUE(include_stan)) {
