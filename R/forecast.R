@@ -55,13 +55,13 @@ full_analysis <- function(data) {
 		out <- list(countries = countries,
 				inputdata = inputdata,
 				all_region_results = all_region_results,
-				full_results = full_results)
+				full_predictive_samples = full_results)
 
 	return(out)
 }
 
 
-scoring <- function(data, full_reults) {
+scoring <- function(data, full_predictive_samples) {
 
 	inputdata <- data$inputdata
 	models <- data$models
@@ -72,7 +72,7 @@ scoring <- function(data, full_reults) {
 		tmp <- lapply(seq_along(models), 
 					  FUN = function(i) {
 					  	score_model_in_region(data, 
-					  						  all_region_results, 
+					  						  full_predictive_samples, 
 					  						  region, 
 					  						  models[i])
 					  })
@@ -84,11 +84,15 @@ scoring <- function(data, full_reults) {
 	return(all_scores)
 }
 
+scoring(data, full_predictive_samples)
 
 
 
 
-score_model_in_region <- function(data, all_region_results, region, model) {
+
+
+
+score_model_in_region <- function(data, full_predictive_samples, region, model) {
 	inputdata <- data$inputdata
 	
 	#find dates for which we have predictions
@@ -101,8 +105,8 @@ score_model_in_region <- function(data, all_region_results, region, model) {
 	y <- y[observed_dates %in% date]
 
 	#  select predictions
-	index <- full_results$country == region & full_results$model == model &full_results$date %in% date
-	pred <- full_results[index, 
+	index <- full_predictive_samples$country == region & full_predictive_samples$model == model & full_predictive_samples$date %in% date
+	pred <- full_predictive_samples[index, 
 						 grepl("sample", colnames(full_results))]
 	days_ahead <- full_results$days_ahead[index]
 

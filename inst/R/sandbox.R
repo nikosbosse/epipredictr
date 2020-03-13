@@ -36,9 +36,6 @@ full_results <- analysis$full_results
 
 
 
-head(full_results[, 1:7])
-
-
 
 
 plot_pred_vs_true <- function(full_results,
