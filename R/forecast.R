@@ -176,7 +176,24 @@ analysis_one_country <- function(data, country = "country", plot = F) {
 		compare_bsts_models(y)
 	}
 
-	forecast_plot_region <- plot_forecast_compare(region_results, dates)
+	
+	## make plots with the predictive performance of all models in that region
+	titles <- names(region_results)
+	plots <- lapply(seq_along(region_results),
+					FUN = function (i) {
+						plot_pred_vs_true(
+						 y_pred_samples = region_results[[i]]$predictive_samples, 
+						 y_true = region_results[[i]]$y,
+						 forecast_run = region_results[[i]]$forecast_run,
+						 plottitle = titles[i], 
+						 dates = dates
+						)
+			        })
+
+	forecast_plot_region <- wrap_plots(plots, ncol = 1)
+
+
+
 	return(list(country = country, 
 			    region_results = region_results,
 				scoring_table_region = scoring_table_region, 

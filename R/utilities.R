@@ -388,42 +388,6 @@ fit_stan_model <-function(y, model, n_pred, vb,
 
 
 
-
-#' @title Wrapper to make a visual plot to compare the outputs of do_all_fits
-#'
-#' @description
-#' Missing.
-#' Also Todo: handling for only one item
-#' @param y
-#'
-#' @return
-#' Missing
-#' @examples
-#' NULL
-#' @export
-
-
-plot_forecast_compare <- function(region_results, dates) {
-	titles <- names(region_results)
-	plots <- lapply(seq_along(region_results),
-					FUN = function (i) {
-						plot_pred_vs_true(
-						 y_pred_samples = region_results[[i]]$predictive_samples, 
-						 y_true = region_results[[i]]$y,
-						 forecast_run = region_results[[i]]$forecast_run,
-						 plottitle = titles[i], 
-						 dates = dates
-						)
-			        })
-
-	(p <- wrap_plots(plots, ncol = 1))
-	return(p)
-
-}
-
-
-
-
 #' @title Plot predictive samples vs. true values
 #'
 #' @description
