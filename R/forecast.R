@@ -17,7 +17,6 @@ full_analysis <- function(data) {
 	countries <- as.character(unique(inputdata$region))
 	models <- data$models
 
-
 	# analysis by country ============================================= #
 	## collect results country-wise
 	all_region_results <- lapply(seq_along(countries),
@@ -51,6 +50,118 @@ full_analysis <- function(data) {
 						   })
 	full_results <- do.call(rbind, full_results)
 	rownames(full_results) <- NULL
+
+
+		out <- list(countries = countries,
+				inputdata = inputdata,
+				all_region_results = all_region_results,
+				full_results = full_results)
+
+	return(out)
+}
+
+
+scoring <- function(data, full_reults) {
+
+	inputdata <- data$inputdata
+	models <- data$models
+	regions <- as.character(unique(inputdata$region))
+
+	all_scores <- list()
+	for (region in regions) {
+		tmp <- lapply(seq_along(models), 
+					  FUN = function(i) {
+					  	score_model_in_region(data, 
+					  						  all_region_results, 
+					  						  region, 
+					  						  models[i])
+					  })
+		scores_one_region <- do.call(rbind, tmp)
+		all_scores[[region]] <- scores_one_region
+	}	
+	all_scores <- do.call(rbind, all_scores)
+
+	return(all_scores)
+}
+
+
+
+
+
+score_model_in_region <- function(data, all_region_results, region, model) {
+	inputdata <- data$inputdata
+	
+	#find dates for which we have predictions
+	observed_dates <- inputdata$date[inputdata$region == region]
+	pred_dates <- full_results$date[full_results$countr == region]
+	date <- as.Date(intersect(observed_dates, pred_dates))
+	
+	# select observations
+	y <- inputdata$median[inputdata$region == region] 
+	y <- y[observed_dates %in% date]
+
+	#  select predictions
+	index <- full_results$country == region & full_results$model == model &full_results$date %in% date
+	pred <- full_results[index, 
+						 grepl("sample", colnames(full_results))]
+	days_ahead <- full_results$days_ahead[index]
+
+	dss <- scoringRules::dss_sample(y = y, dat = as.matrix(pred))
+	crps <- scoringRules::crps_sample(y = y, dat = as.matrix(pred))
+
+	scores <- data.frame(date = date, 
+			   model = model, 
+			   region = region,
+			   days_ahead = days_ahead, 
+			   crps = crps, 
+			   dss = dss)
+
+	return(scores)
+}
+
+
+
+
+
+
+
+# scoring_table_region <- compare_forecasts(inputdata, region_results)
+
+
+
+
+
+
+
+
+	# if(isTRUE(plot)) {
+	# 	y <- inputdata[inputdata$region == country, 
+	# 			   colnames(inputdata) == "median"]
+	# 	compare_bsts_models(y)
+	# }
+
+	
+	## make plots with the predictive performance of all models in that region
+	# titles <- names(region_results)
+	# plots <- lapply(seq_along(region_results),
+	# 				FUN = function (i) {
+	# 					plot_pred_vs_true(
+	# 					 y_pred_samples = region_results[[i]]$predictive_samples, 
+	# 					 y_true = region_results[[i]]$y,
+	# 					 forecast_run = region_results[[i]]$forecast_run,
+	# 					 plottitle = titles[i], 
+	# 					 dates = dates
+	# 					)
+	# 		        })
+
+
+
+
+
+
+
+
+
 
 	## scoring ================================================== #
 	## do aggregated scoring
@@ -118,15 +229,7 @@ full_analysis <- function(data) {
 
 	## make case predictions with best model ============ #
 
-	out <- list(countries = countries,
-				inputdata = inputdata,
-				all_region_results = all_region_results,
-				# scoring = scoring,
-				# predictions_best = predictions_best, 
-				full_results = full_results)
 
-	return(out)
-}
 
 
 
