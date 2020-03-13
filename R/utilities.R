@@ -181,6 +181,7 @@ extract_samples <- function(stanfitobject,
 
 fit_iteratively <- function(data,
 							country,
+							in_between_pred = T,
 							max_n_past_obs = Inf,
 							model = "local",
 							n_samples = 4000,
@@ -197,39 +198,31 @@ fit_iteratively <- function(data,
 				      colnames(inputdata) == "date"]
 	n_pred = data$n_pred
 	start_period = data$start_period
-
-
-	## track time
-	time <- Sys.time()
-
-	## calculate number of fits to do
-	total_n <- (length(y))
-	n_runs <- ceiling((total_n - (start_period - 1)) / n_pred)
+	total_n <- length(y)
 
 	## initialize empty lists to hold the results
 	predictive_samples <- list()
 	forecast_run <-list()
 	stanfitobjects <- list()
 
-	## do iterative fitting
-	i <- 0
 	current_last_obs <- start_period - 1
 	if (current_last_obs > total_n) {
 		stop("start_period later than length of series")
 	}
 
-	while (current_last_obs < total_n){
-		cat("run ", as.character(i + 1), "of ", as.character(n_runs + 1), "\n")
-
-		## determine current indices and make data
-		index <- 1:current_last_obs
+	run <- 1
+	for (curr_last_data_point in current_last_obs:total_n) {
+		
+		## determine current indices
+		index <- 1:curr_last_data_point
 		if (length(index) > max_n_past_obs) {
 			current_earliest_obs <- length(index) - max_n_past_obs + 1
 			index <- index[current_earliest_obs:current_last_obs]
 		}
+
+		# get current data and corresponding dates
 		y_curr <- y[index]
 		curr_dates <- dates[index]
-		i <- i + 1
 
 		if (fit_type == "stan") {
 			# stanfit <- fit_stan_model(y_curr, model, n_pred = n_pred, vb = vb,
@@ -238,71 +231,20 @@ fit_iteratively <- function(data,
 			# stanfitobjects[[i]] <- stanfit
 			# predictive_samples[[i]] <- extract_samples(stanfit)
 		} else {
-			predictive_samples[[i]] <- bsts_wrapper(y = y_curr,
+			predictive_samples[[run]] <- bsts_wrapper(y = y_curr,
 													dates = curr_dates,
 													model = model,
 													num_pred  = n_pred)
 
-			head(predictive_samples[[1]][, 1:5])
 		}
+		forecast_run[[run]] <- rep(run, n_pred)
 
-		forecast_run[[i]] <- rep(i, nrow(predictive_samples[[i]]))
-
-		current_last_obs <- current_last_obs + n_pred
+		run <- run + 1
 	}
 
     predictive_samples <- do.call("rbind", predictive_samples)
 
     forecast_run <- do.call("c", forecast_run)
-
-    ## cap predictions to match the length of the
-    ## true_values minus the starting data
-    last_n_to_display <- nrow(predictive_samples) - (current_last_obs - total_n)
-	predictive_samples <- predictive_samples[1:last_n_to_display, ]
-    forecast_run <- forecast_run[1:last_n_to_display]
-
-	## do another last prediction into the future and store results
-	index <- 1:total_n
-		if (length(index) > max_n_past_obs) {
-			current_earliest_obs <- length(index) - max_n_past_obs + 1
-			index <- index[current_earliest_obs:total_n]
-		}
-	y_curr <- y[index]
-	curr_dates <- dates[index]
-	cat("run ", as.character(i + 1), "of ", as.character(n_runs + 1), "\n")
-	i <- i + 1
-	if (fit_type == "stan") {
-			# stanfit <- fit_stan_model(y, model,
-			# 				  n_pred = n_pred,
-			# 				  vb = vb,
-			# 				  iter = iter,
-			# 				  length_local_trend = length_local_trend)
-
-			# stanfitobjects[[i]] <- stanfit
-			# predictive_samples <- rbind(predictive_samples,
-			# 					     	extract_samples(stanfit))
-		} else {
-			predictive_samples <- rbind(predictive_samples,
-										bsts_wrapper(y = y_curr,
-										 			 dates = curr_dates,
-													 model = model,
-													 num_pred  = n_pred))
-		}
-
-	forecast_run <- c(forecast_run, rep(i, n_pred))
-
- #    ## add NAs to the predictions and the true_values
- #    NA_mat <- as.data.frame(matrix(NA, nrow = start_period - 1,
- #    				 ncol = ncol(predictive_samples)))
-
- #    NA_mat[,1] <- predictive_samples[1,1] - nrow(NA_mat):1
- #    colnames(NA_mat) = colnames(predictive_samples) 
-
- #    predictive_samples <- rbind(NA_mat,
-	# 							predictive_samples)
-
-	# y <- c(y, rep(NA, n_pred))
- #    forecast_run <- c(rep(NA, start_period - 1), forecast_run)
 
     predictive_samples <- cbind(forecast_run = forecast_run, 
     							country = country, 
@@ -310,8 +252,6 @@ fit_iteratively <- function(data,
 								type = "predicted",
 								predictive_samples)
 
-
-	print(Sys.time() - time)
 	return(list(predictive_samples = predictive_samples,
 		        forecast_run = forecast_run,
 		        stanfitobjects = stanfitobjects,
@@ -408,21 +348,35 @@ fit_stan_model <-function(y, model, n_pred, vb,
 #' NULL
 #' @export
 
-
-
-plot_pred_vs_true <- function(y_true,
-							  y_pred_samples,
-							  forecast_run,
+plot_pred_vs_true <- function(full_results,
+							  inputdata, 
+							  region,
+							  model,
 							  vlines = F,
 							  dates = NULL,
 							  plottitle = "Pred vs. True"){
+	
+	plottitle <- paste("predictions for model", model, "in", country)
 
-# y_pred_samples <- (analysis$all_region_results$austria$region_results$bsts_local$predictive_samples)
+	## make df with observed values
+	y_true <- inputdata$median[inputdata$region == region]
+	inputdates <- inputdata$date[inputdata$region == region]
+	obs <- data.frame(date = inputdates, 
+					  type = "observed", 
+					  y = y_true, 
+					  ci2.5 = NA, 
+				      ci25 = NA, 
+				      ci75 = NA, 
+				      ci97.5 = NA, 
+				      forecast_run = NA)
 
-# y_true <- (analysis$all_region_results$austria$region_results$bsts_local$y)
-# forecast_run <- (analysis$all_region_results$austria$region_results$bsts_local$forecast_run)
-	dates <- y_pred_samples$predicted_date
-	y_pred_samples <- y_pred_samples[, grep("sample", colnames(y_pred_samples))]
+	## make df to plot predicted values
+	index <- full_results$country == region & full_results$model == model
+	y_pred_samples <- full_results[index, 
+								   grep("sample", colnames(full_results))]	
+	
+	preddates <- full_results$date[index]
+	forecast_run <- full_results$forecast_run[index]
 
 	pred_mean <- rowMeans(y_pred_samples)
 	pred_median <- apply(y_pred_samples, median, MARGIN = 1)
@@ -432,13 +386,19 @@ plot_pred_vs_true <- function(y_true,
 								probs = c(0.025, 0.25, 0.75, 0.975),
 							    na.rm = TRUE))
 
-	df <- (cbind(as.data.frame(dates), y_true, pred_median,
-							  pred_mean, pred_quantiles, forecast_run))
-	colnames(df) <- c("date", "true", "median", "mean", "ci2.5",
-					  "ci25", "ci75", "ci97.5", "forecast_run")
+	pred <- data.frame(date = preddates, 
+				       type = "predicted", 
+				       y = pred_median, 
+				       ci2.5 = pred_quantiles[,1], 
+				       ci25 = pred_quantiles[,2], 
+				       ci75 = pred_quantiles[,3], 
+				       ci97.5 = pred_quantiles[,4], 
+				       forecast_run = forecast_run)
 
-	start_data <- sum(is.na(forecast_run))
-	interval <- sum(forecast_run == 1, na.rm = TRUE)
+	df <- (rbind(obs, pred))
+
+	# start_data <- sum(is.na(forecast_run))
+	# interval <- sum(forecast_run == 1, na.rm = TRUE)
 
 	## make vertical lines to display
 	if (isTRUE(vlines)) {
@@ -453,15 +413,13 @@ plot_pred_vs_true <- function(y_true,
 		vlines <- 0
 	}
 
-	plot <- ggplot(df, aes(x = dates), group = forecast_run) +
+	plot <- ggplot(df, aes(x = date, group = type)) +
 			geom_ribbon(aes(ymin =ci2.5, ymax = ci97.5), alpha = 0.5,
 						fill = "gray") +
 			geom_ribbon(aes(ymin = ci25, ymax = ci75), alpha = 0.7,
 						fill = "gray") +
-			geom_line(aes(y = median), color = "darkgray", size=1) +
-			geom_point(aes(y = median), color = "black", size=6) +
-			geom_line(aes(y = true), size=1, color = "darkgray") +
-			geom_point(aes(y = true), size=6, color = "black") +
+			geom_line(aes(y = y, group = type, color = type), size=1) +
+			geom_point(aes(y = y), color = "black", size=1) +
 			ggtitle(plottitle) +
 			theme(text = element_text(family = 'Sans Serif'))
 
@@ -470,6 +428,70 @@ plot_pred_vs_true <- function(y_true,
 	}
 	return(plot)
 }
+
+
+
+
+# plot_pred_vs_true <- function(y_true,
+# 							  y_pred_samples,
+# 							  forecast_run,
+# 							  vlines = F,
+# 							  dates = NULL,
+# 							  plottitle = "Pred vs. True"){
+
+# # y_pred_samples <- (analysis$all_region_results$austria$region_results$bsts_local$predictive_samples)
+
+# # y_true <- (analysis$all_region_results$austria$region_results$bsts_local$y)
+# # forecast_run <- (analysis$all_region_results$austria$region_results$bsts_local$forecast_run)
+# 	dates <- y_pred_samples$predicted_date
+# 	y_pred_samples <- y_pred_samples[, grep("sample", colnames(y_pred_samples))]
+
+# 	pred_mean <- rowMeans(y_pred_samples)
+# 	pred_median <- apply(y_pred_samples, median, MARGIN = 1)
+# 	pred_quantiles <- t(apply(y_pred_samples,
+# 								MARGIN = 1,
+# 								FUN = quantile,
+# 								probs = c(0.025, 0.25, 0.75, 0.975),
+# 							    na.rm = TRUE))
+
+# 	df <- (cbind(as.data.frame(dates), y_true, pred_median,
+# 							  pred_mean, pred_quantiles, forecast_run))
+# 	colnames(df) <- c("date", "true", "median", "mean", "ci2.5",
+# 					  "ci25", "ci75", "ci97.5", "forecast_run")
+
+# 	start_data <- sum(is.na(forecast_run))
+# 	interval <- sum(forecast_run == 1, na.rm = TRUE)
+
+# 	## make vertical lines to display
+# 	if (isTRUE(vlines)) {
+# 		x <- unique(forecast_run)
+# 		seq <- rep(NA, length(x) - 1)
+# 		for (i in 1:(length(x) - 1)) {
+# 			seq[i] <- which(forecast_run == x[i + 1] )[1] - 1
+# 		}
+# 		vlines <- rep(NA, nrow(df))
+# 		vlines[seq] <- seq
+# 	} else {
+# 		vlines <- 0
+# 	}
+
+# 	plot <- ggplot(df, aes(x = dates), group = forecast_run) +
+# 			geom_ribbon(aes(ymin =ci2.5, ymax = ci97.5), alpha = 0.5,
+# 						fill = "gray") +
+# 			geom_ribbon(aes(ymin = ci25, ymax = ci75), alpha = 0.7,
+# 						fill = "gray") +
+# 			geom_line(aes(y = median), color = "darkgray", size=1) +
+# 			geom_point(aes(y = median), color = "black", size=6) +
+# 			geom_line(aes(y = true), size=1, color = "darkgray") +
+# 			geom_point(aes(y = true), size=6, color = "black") +
+# 			ggtitle(plottitle) +
+# 			theme(text = element_text(family = 'Sans Serif'))
+
+# 	if (isTRUE(vlines)) {
+# 		plot <- plot + geom_vline(aes(xintercept = vlines))
+# 	}
+# 	return(plot)
+# }
 
 
 #' @title Plot prior vs posterior distribution of parameters

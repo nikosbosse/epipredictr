@@ -84,55 +84,34 @@ scoring <- function(data, full_predictive_samples) {
 	return(all_scores)
 }
 
-scoring(data, full_predictive_samples)
-
-
-
-
-
-
 
 score_model_in_region <- function(data, full_predictive_samples, region, model) {
 	inputdata <- data$inputdata
 	
-	#find dates for which we have predictions
-	observed_dates <- inputdata$date[inputdata$region == region]
-	pred_dates <- full_results$date[full_results$countr == region]
-	date <- as.Date(intersect(observed_dates, pred_dates))
+	# #find dates for which we have predictions
+	# observed_dates <- inputdata$date[inputdata$region == region]
+	# pred_dates <- full_results$date[full_results$countr == region]
+	# date <- as.Date(intersect(observed_dates, pred_dates))
 	
-	# select observations
-	y <- inputdata$median[inputdata$region == region] 
-	y <- y[observed_dates %in% date]
+	# select observations and predictions
+	observations <- inputdata[inputdata$region == region, ] 
+	predictions <- full_predictive_samples[index, ]
 
-	#  select predictions
-	index <- full_predictive_samples$country == region & full_predictive_samples$model == model & full_predictive_samples$date %in% date
-	pred <- full_predictive_samples[index, 
-						 grepl("sample", colnames(full_results))]
-	days_ahead <- full_results$days_ahead[index]
+	df <- merge(observations, predictions)
+	pred <- df[, grepl("sample", colnames(df))]
 
-	dss <- scoringRules::dss_sample(y = y, dat = as.matrix(pred))
-	crps <- scoringRules::crps_sample(y = y, dat = as.matrix(pred))
+	dss <- scoringRules::dss_sample(y = df$median, dat = as.matrix(pred))
+	crps <- scoringRules::crps_sample(y = df$median, dat = as.matrix(pred))
 
-	scores <- data.frame(date = date, 
+	scores <- data.frame(date = df$date, 
 			   model = model, 
 			   region = region,
-			   days_ahead = days_ahead, 
+			   days_ahead = df$days_ahead, 
 			   crps = crps, 
 			   dss = dss)
 
 	return(scores)
 }
-
-
-
-
-
-
-
-# scoring_table_region <- compare_forecasts(inputdata, region_results)
-
-
-
 
 
 
