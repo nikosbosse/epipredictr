@@ -29,17 +29,106 @@ data <- list(inputdata = inputdata,
 
 analysis <- full_analysis(data)
 
+model <- "local"
+region = country = "austria"
+
+full_results <- analysis$full_results
+
+
+
+head(full_results[, 1:7])
+
+
+
+plot_pred_vs_true <- function(full_results,
+							  inputdata, 
+							  region,
+							  model,
+							  vlines = F,
+							  dates = NULL,
+							  plottitle = "Pred vs. True"){
+	
+	plottitle <- paste("predictions for model", model, "in", country)
+
+	## make df with observed values
+	y_true <- inputdata$median[inputdata$region == region]
+	inputdates <- inputdata$date[inputdata$region == region]
+	obs <- data.frame(date = inputdates, 
+					  type = "observed", 
+					  y = y_true, 
+					  ci2.5 = NA, 
+				      ci25 = NA, 
+				      ci75 = NA, 
+				      ci97.5 = NA, 
+				      forecast_run = NA)
+
+	## make df to plot predicted values
+	index <- full_results$country == region & full_results$model == model
+	y_pred_samples <- full_results[index, 
+								   grep("sample", colnames(full_results))]	
+	
+	preddates <- full_results$date[index]
+	forecast_run <- full_results$forecast_run[index]
+
+	pred_mean <- rowMeans(y_pred_samples)
+	pred_median <- apply(y_pred_samples, median, MARGIN = 1)
+	pred_quantiles <- t(apply(y_pred_samples,
+								MARGIN = 1,
+								FUN = quantile,
+								probs = c(0.025, 0.25, 0.75, 0.975),
+							    na.rm = TRUE))
+
+	pred <- data.frame(date = preddates, 
+				       type = "predicted", 
+				       y = pred_median, 
+				       ci2.5 = pred_quantiles[,1], 
+				       ci25 = pred_quantiles[,2], 
+				       ci75 = pred_quantiles[,3], 
+				       ci97.5 = pred_quantiles[,4], 
+				       forecast_run = forecast_run)
+
+
+
+
+	df <- (rbind(obs, pred))
+
+	# start_data <- sum(is.na(forecast_run))
+	# interval <- sum(forecast_run == 1, na.rm = TRUE)
+
+	## make vertical lines to display
+	if (isTRUE(vlines)) {
+		x <- unique(forecast_run)
+		seq <- rep(NA, length(x) - 1)
+		for (i in 1:(length(x) - 1)) {
+			seq[i] <- which(forecast_run == x[i + 1] )[1] - 1
+		}
+		vlines <- rep(NA, nrow(df))
+		vlines[seq] <- seq
+	} else {
+		vlines <- 0
+	}
+
+	plot <- ggplot(df, aes(x = date, group = type)) +
+			geom_ribbon(aes(ymin =ci2.5, ymax = ci97.5), alpha = 0.5,
+						fill = "gray") +
+			geom_ribbon(aes(ymin = ci25, ymax = ci75), alpha = 0.7,
+						fill = "gray") +
+			geom_line(aes(y = y, group = type, color = type), size=1) +
+			geom_point(aes(y = y), color = "black", size=1) +
+			ggtitle(plottitle) +
+			theme(text = element_text(family = 'Sans Serif'))
+
+	if (isTRUE(vlines)) {
+		plot <- plot + geom_vline(aes(xintercept = vlines))
+	}
+	return(plot)
+}
 
 
 
 
 
-
-
-
-
-
-
+plot_pred_vs_true(full_results, region, model)
 
 
 

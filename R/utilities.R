@@ -239,9 +239,11 @@ fit_iteratively <- function(data,
 			# predictive_samples[[i]] <- extract_samples(stanfit)
 		} else {
 			predictive_samples[[i]] <- bsts_wrapper(y = y_curr,
-													dates = dates,
+													dates = curr_dates,
 													model = model,
 													num_pred  = n_pred)
+
+			head(predictive_samples[[1]][, 1:5])
 		}
 
 		forecast_run[[i]] <- rep(i, nrow(predictive_samples[[i]]))
@@ -266,6 +268,7 @@ fit_iteratively <- function(data,
 			index <- index[current_earliest_obs:total_n]
 		}
 	y_curr <- y[index]
+	curr_dates <- dates[index]
 	cat("run ", as.character(i + 1), "of ", as.character(n_runs + 1), "\n")
 	i <- i + 1
 	if (fit_type == "stan") {
@@ -281,30 +284,30 @@ fit_iteratively <- function(data,
 		} else {
 			predictive_samples <- rbind(predictive_samples,
 										bsts_wrapper(y = y_curr,
-										 			 dates = dates,
+										 			 dates = curr_dates,
 													 model = model,
 													 num_pred  = n_pred))
 		}
 
 	forecast_run <- c(forecast_run, rep(i, n_pred))
 
-    ## add NAs to the predictions and the true_values
-    NA_mat <- as.data.frame(matrix(NA, nrow = start_period - 1,
-    				 ncol = ncol(predictive_samples)))
+ #    ## add NAs to the predictions and the true_values
+ #    NA_mat <- as.data.frame(matrix(NA, nrow = start_period - 1,
+ #    				 ncol = ncol(predictive_samples)))
 
-    NA_mat[,1] <- predictive_samples[1,1] - nrow(NA_mat):1
-    colnames(NA_mat) = colnames(predictive_samples) 
+ #    NA_mat[,1] <- predictive_samples[1,1] - nrow(NA_mat):1
+ #    colnames(NA_mat) = colnames(predictive_samples) 
 
-    predictive_samples <- rbind(NA_mat,
-								predictive_samples)
+ #    predictive_samples <- rbind(NA_mat,
+	# 							predictive_samples)
 
-	y <- c(y, rep(NA, n_pred))
-    forecast_run <- c(rep(NA, start_period - 1), forecast_run)
+	# y <- c(y, rep(NA, n_pred))
+ #    forecast_run <- c(rep(NA, start_period - 1), forecast_run)
 
     predictive_samples <- cbind(forecast_run = forecast_run, 
-    							y_true = y,
     							country = country, 
 								model = model, 
+								type = "predicted",
 								predictive_samples)
 
 
@@ -413,7 +416,6 @@ plot_pred_vs_true <- function(y_true,
 							  vlines = F,
 							  dates = NULL,
 							  plottitle = "Pred vs. True"){
-
 
 # y_pred_samples <- (analysis$all_region_results$austria$region_results$bsts_local$predictive_samples)
 
@@ -579,7 +581,7 @@ bsts_wrapper <- function(y, model,
 	days_ahead <- 1:nrow(predictive_samples)
 	last_date <- dates[length(dates)]
 	predicted_date <- last_date + days_ahead
-	predictive_samples <- cbind(predicted_date = predicted_date, 
+	predictive_samples <- cbind(date = predicted_date, 
 	                            days_ahead = days_ahead, 
 	                            predictive_samples)
 	
@@ -606,11 +608,11 @@ bsts_wrapper <- function(y, model,
 #' @export
 
 
-compare_forecasts <- function(region_results = NULL) {
+compare_forecasts <- function(inputdata = NULL, region_results = NULL) {
 	titles <- names(region_results)
 	scores <- lapply(seq_along(region_results),
 					 FUN = function (i) {
-					 	y <- region_results[[i]]$y
+					 	y <- inputdata
 					 	pred <- region_results[[i]]$predictive_samples
 					 	pred <- pred[, grep("sample", colnames(pred))]
 					 	forecast_run <-region_results[[i]]$forecast_run
