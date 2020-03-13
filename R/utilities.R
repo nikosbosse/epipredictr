@@ -180,7 +180,7 @@ extract_samples <- function(stanfitobject,
 
 
 fit_iteratively <- function(data,
-							country,
+							region,
 							in_between_pred = T,
 							max_n_past_obs = Inf,
 							model = "local",
@@ -192,9 +192,9 @@ fit_iteratively <- function(data,
 							...) {
 
 	inputdata <- data$inputdata
-	y = inputdata[inputdata$region == country,
+	y = inputdata[inputdata$region == region,
 				  colnames(inputdata) == "median"]
-	dates = inputdata[inputdata$region == country,
+	dates = inputdata[inputdata$region == region,
 				      colnames(inputdata) == "date"]
 	n_pred = data$n_pred
 	start_period = data$start_period
@@ -247,7 +247,7 @@ fit_iteratively <- function(data,
     forecast_run <- do.call("c", forecast_run)
 
     predictive_samples <- cbind(forecast_run = forecast_run, 
-    							country = country, 
+    							region = region, 
 								model = model, 
 								type = "predicted",
 								predictive_samples)
@@ -356,7 +356,7 @@ plot_pred_vs_true <- function(full_results,
 							  dates = NULL,
 							  plottitle = "Pred vs. True"){
 	
-	plottitle <- paste("predictions for model", model, "in", country)
+	plottitle <- paste("predictions for model", model, "in", region)
 
 	## make df with observed values
 	y_true <- inputdata$median[inputdata$region == region]
@@ -371,7 +371,7 @@ plot_pred_vs_true <- function(full_results,
 				      forecast_run = NA)
 
 	## make df to plot predicted values
-	index <- full_results$country == region & full_results$model == model
+	index <- full_results$region == region & full_results$model == model
 	y_pred_samples <- full_results[index, 
 								   grep("sample", colnames(full_results))]	
 	
@@ -716,7 +716,7 @@ compare_bsts_models <- function(y) {
 #' NULL
 #' @export
 
-forecast_table <- function(results_region_model, country = "country") {
+forecast_table <- function(results_region_model, region = NULL) {
 
 	pred <- results_region_model$predictive_samples[is.na(results_region_model$y), ]
 
@@ -726,14 +726,14 @@ forecast_table <- function(results_region_model, country = "country") {
 	mean_3 <- median(as.numeric(pred[3, ]))
 	quantiles_3 <- quantile(as.numeric(pred[3, ]), c(0.025, 0.25, 0.75, 0.975))
 
-	df <- data.frame(country = country,
+	df <- data.frame(region = region,
 					 median_3 = median_3,
 					 mean_3 = mean_3,
 					 "quantile_2.5" = quantiles_3[1],
 					 "quantile_25" = quantiles_3[2],
 					 "quantile_75" = quantiles_3[3],
 					 "quantile_97.5" = quantiles_3[4])
-	rownames(df) <- country
+	rownames(df) <- region
 	return(df)
 }
 

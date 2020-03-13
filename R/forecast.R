@@ -14,21 +14,21 @@
 full_analysis <- function(data) {
 
 	inputdata <- data$inputdata
-	countries <- as.character(unique(inputdata$region))
+	regions <- as.character(unique(inputdata$region))
 	models <- data$models
 
-	# analysis by country ============================================= #
+	# analysis by region ============================================= #
 	## collect results country-wise
-	all_region_results <- lapply(seq_along(countries),
+	all_region_results <- lapply(seq_along(regions),
 				  FUN = function(i) {
 				  	out <- tryCatch(
 				  		{
-				  			analysis_one_country(country = countries[i],
+				  			analysis_one_region(region = regions[i],
 				  								data = data)
 				  		}, 
 				  		error = function(cond) {
 				  			warning(cond)
-				  			warning(paste("Issue with region", countries[i]))
+				  			warning(paste("Issue with region", regions[i]))
 				  			return(NULL)
 				  		}
 				  	)
@@ -39,11 +39,11 @@ full_analysis <- function(data) {
 	failure <- do.call(c, failure)
 
 	all_region_results <- all_region_results[!failure]
-	countries <- countries[!failure]
-	names(all_region_results) <- countries
+	regions <- regions[!failure]
+	names(all_region_results) <- regions
 	## ================================================================ #
 
-	## aggregate all country results into one data.frame
+	## aggregate all region results into one data.frame
 	full_results <- lapply(all_region_results, 
 						   function(x) {
 						 	  return(x[["complete_region_results"]])
@@ -52,7 +52,7 @@ full_analysis <- function(data) {
 	rownames(full_results) <- NULL
 
 
-		out <- list(countries = countries,
+		out <- list(regions = regions,
 				inputdata = inputdata,
 				all_region_results = all_region_results,
 				full_predictive_samples = full_results)
@@ -66,6 +66,33 @@ scoring <- function(data, full_predictive_samples) {
 	inputdata <- data$inputdata
 	models <- data$models
 	regions <- as.character(unique(inputdata$region))
+
+	score_model_in_region <- function(data, full_predictive_samples, region, model) {
+		inputdata <- data$inputdata
+
+		# select observations and predictions
+		index <- full_predictive_samples$model == model & full_predictive_samples$region == region
+		observations <- inputdata[inputdata$region == region, ] 
+		predictions <- full_predictive_samples[index, ]
+
+		predictions[, 1:7]
+
+		df <- merge(observations, predictions)
+		pred <- df[, grepl("sample", colnames(df))]
+
+		dss <- scoringRules::dss_sample(y = df$median, dat = as.matrix(pred))
+		crps <- scoringRules::crps_sample(y = df$median, dat = as.matrix(pred))
+
+		scores <- data.frame(date = df$date, 
+				   model = model, 
+				   region = region,
+				   days_ahead = df$days_ahead, 
+				   crps = crps, 
+				   dss = dss)
+
+		return(scores)
+	}
+
 
 	all_scores <- list()
 	for (region in regions) {
@@ -85,33 +112,7 @@ scoring <- function(data, full_predictive_samples) {
 }
 
 
-score_model_in_region <- function(data, full_predictive_samples, region, model) {
-	inputdata <- data$inputdata
-	
-	# #find dates for which we have predictions
-	# observed_dates <- inputdata$date[inputdata$region == region]
-	# pred_dates <- full_results$date[full_results$countr == region]
-	# date <- as.Date(intersect(observed_dates, pred_dates))
-	
-	# select observations and predictions
-	observations <- inputdata[inputdata$region == region, ] 
-	predictions <- full_predictive_samples[index, ]
 
-	df <- merge(observations, predictions)
-	pred <- df[, grepl("sample", colnames(df))]
-
-	dss <- scoringRules::dss_sample(y = df$median, dat = as.matrix(pred))
-	crps <- scoringRules::crps_sample(y = df$median, dat = as.matrix(pred))
-
-	scores <- data.frame(date = df$date, 
-			   model = model, 
-			   region = region,
-			   days_ahead = df$days_ahead, 
-			   crps = crps, 
-			   dss = dss)
-
-	return(scores)
-}
 
 
 
@@ -235,11 +236,11 @@ score_model_in_region <- function(data, full_predictive_samples, region, model) 
 #' @export
 #'
 
-analysis_one_country <- function(data, country = "country", plot = F) {
+analysis_one_region <- function(data, region = NULL, plot = F) {
 
 	models <- data$models
 	inputdata <- data$inputdata
-	dates = inputdata[inputdata$region == country,	
+	dates = inputdata[inputdata$region == region,	
 			      colnames(inputdata) == "date"]	
 
 	## do forecasting
@@ -249,7 +250,7 @@ analysis_one_country <- function(data, country = "country", plot = F) {
 	for (model in models) {
 		name <- paste("bsts_", model, sep = "")
 		region_results[[name]] <- fit_iteratively(data, 
-												  country = country, 
+												  region = region, 
 									      		  model = model, 
 									      		  fit_type = "bsts_package")
 	}
@@ -293,7 +294,7 @@ analysis_one_country <- function(data, country = "country", plot = F) {
 
 
 
-	return(list(country = country, 
+	return(list(region = region, 
 			    region_results = region_results,
 				#scoring_table_region = scoring_table_region, 
 				#forecast_plot_region = forecast_plot_region, 
@@ -353,14 +354,14 @@ add_average_model <- function(region_results) {
 	}
 	avg <- pred / length(region_results)
 
-	## add columns with country, model, date and days ahead
+	## add columns with region, model, date and days ahead
 	avg <- cbind(region_results[[1]]$predictive_samples$forecast_run, 
-				 region_results[[1]]$predictive_samples$country, 
+				 region_results[[1]]$predictive_samples$region, 
 				 region_results[[1]]$predictive_samples$model, 
 				 region_results[[1]]$predictive_samples$predicted_date,
 				 region_results[[1]]$predictive_samples$days_ahead,  	
 				 avg)
-	colnames(avg)[1:5] <- c("forecast_run", "country", 
+	colnames(avg)[1:5] <- c("forecast_run", "region", 
 							"model", "predicted_date", "days_ahead")
     							
 

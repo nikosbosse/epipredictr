@@ -34,8 +34,8 @@ region = country = "austria"
 
 full_predictive_samples <- analysis$full_predictive_samples
 
+scoring <- scoring(data, analysis$full_predictive_samples)
 
-full_predictive_samples[1:100, 1:8]
 
 
 
