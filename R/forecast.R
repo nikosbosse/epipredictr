@@ -151,8 +151,6 @@ analysis_one_country <- function(data, country = "country", plot = F) {
 	dates = inputdata[inputdata$region == country,	
 			      colnames(inputdata) == "date"]	
 
-
-
 	## do forecasting
 	# if (isTRUE(include_stan)) {
 	# }
@@ -164,6 +162,8 @@ analysis_one_country <- function(data, country = "country", plot = F) {
 									      		  model = model, 
 									      		  fit_type = "bsts_package")
 	}
+
+	##aggregate region results into one data.frame
 
 	region_results <- add_average_model(region_results)
 
@@ -254,13 +254,16 @@ add_average_model <- function(region_results) {
 	avg <- pred / length(region_results)
 
 	## add columns with country, model, date and days ahead
-	avg <- cbind(region_results[[1]]$predictive_samples$country, 
+	avg <- cbind(region_results[[1]]$predictive_samples$forecast_run, 
+				 region_results[[1]]$predictive_samples$y_true, 
+				 region_results[[1]]$predictive_samples$country, 
 				 region_results[[1]]$predictive_samples$model, 
 				 region_results[[1]]$predictive_samples$predicted_date,
 				 region_results[[1]]$predictive_samples$days_ahead,  	
 				 avg)
-	colnames(avg)[1:4] <- c("county", "model", "predicted_date", "days_ahead")
-
+	colnames(avg)[1:6] <- c("forecast_run", "y_true", "country", 
+							"model", "predicted_date", "days_ahead")
+    							
 
 	region_results$average$predictive_samples <- avg
 	region_results$average$y <- region_results[[1]]$y

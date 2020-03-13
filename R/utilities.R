@@ -298,12 +298,14 @@ fit_iteratively <- function(data,
     predictive_samples <- rbind(NA_mat,
 								predictive_samples)
 
-    predictive_samples <- cbind(country = country, 
+	y <- c(y, rep(NA, n_pred))
+    forecast_run <- c(rep(NA, start_period - 1), forecast_run)
+
+    predictive_samples <- cbind(forecast_run = forecast_run, 
+    							y_true = y,
+    							country = country, 
 								model = model, 
 								predictive_samples)
-
-    y <- c(y, rep(NA, n_pred))
-    forecast_run <- c(rep(NA, start_period - 1), forecast_run)
 
 
 	print(Sys.time() - time)
@@ -383,9 +385,6 @@ fit_stan_model <-function(y, model, n_pred, vb,
                         	control = list(adapt_delta = 0.99))
 		}
 }
-
-
-
 
 
 #' @title Plot predictive samples vs. true values
