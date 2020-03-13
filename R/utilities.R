@@ -182,7 +182,7 @@ extract_samples <- function(stanfitobject,
 fit_iteratively <- function(data,
 							country,
 							max_n_past_obs = Inf,
-							model = "bsts",
+							model = "local",
 							n_samples = 4000,
 							vb = FALSE,
 							fit_type = "bsts_package",
@@ -249,7 +249,6 @@ fit_iteratively <- function(data,
 		current_last_obs <- current_last_obs + n_pred
 	}
 
-
     predictive_samples <- do.call("rbind", predictive_samples)
 
     forecast_run <- do.call("c", forecast_run)
@@ -298,6 +297,11 @@ fit_iteratively <- function(data,
 
     predictive_samples <- rbind(NA_mat,
 								predictive_samples)
+
+    predictive_samples <- cbind(country = country, 
+								model = model, 
+								predictive_samples)
+
     y <- c(y, rep(NA, n_pred))
     forecast_run <- c(rep(NA, start_period - 1), forecast_run)
 
@@ -384,6 +388,42 @@ fit_stan_model <-function(y, model, n_pred, vb,
 
 
 
+
+#' @title Wrapper to make a visual plot to compare the outputs of do_all_fits
+#'
+#' @description
+#' Missing.
+#' Also Todo: handling for only one item
+#' @param y
+#'
+#' @return
+#' Missing
+#' @examples
+#' NULL
+#' @export
+
+
+plot_forecast_compare <- function(region_results, dates) {
+	titles <- names(region_results)
+	plots <- lapply(seq_along(region_results),
+					FUN = function (i) {
+						plot_pred_vs_true(
+						 y_pred_samples = region_results[[i]]$predictive_samples, 
+						 y_true = region_results[[i]]$y,
+						 forecast_run = region_results[[i]]$forecast_run,
+						 plottitle = titles[i], 
+						 dates = dates
+						)
+			        })
+
+	(p <- wrap_plots(plots, ncol = 1))
+	return(p)
+
+}
+
+
+
+
 #' @title Plot predictive samples vs. true values
 #'
 #' @description
@@ -407,7 +447,7 @@ fit_stan_model <-function(y, model, n_pred, vb,
 plot_pred_vs_true <- function(y_true,
 							  y_pred_samples,
 							  forecast_run,
-							  vlines = T,
+							  vlines = F,
 							  dates = NULL,
 							  plottitle = "Pred vs. True"){
 
@@ -427,7 +467,7 @@ plot_pred_vs_true <- function(y_true,
 								probs = c(0.025, 0.25, 0.75, 0.975),
 							    na.rm = TRUE))
 
-	df <- as.data.frame(cbind(dates, y_true, pred_median,
+	df <- (cbind(as.data.frame(dates), y_true, pred_median,
 							  pred_mean, pred_quantiles, forecast_run))
 	colnames(df) <- c("date", "true", "median", "mean", "ci2.5",
 					  "ci25", "ci75", "ci97.5", "forecast_run")
@@ -585,39 +625,6 @@ bsts_wrapper <- function(y, model,
 }
 
 
-
-
-#' @title Wrapper to make a visual plot to compare the outputs of do_all_fits
-#'
-#' @description
-#' Missing.
-#' Also Todo: handling for only one item
-#' @param y
-#'
-#' @return
-#' Missing
-#' @examples
-#' NULL
-#' @export
-
-
-plot_forecast_compare <- function(region_results, dates) {
-	titles <- names(region_results)
-	plots <- lapply(seq_along(region_results),
-					FUN = function (i) {
-						plot_pred_vs_true(
-						 y_pred_samples = region_results[[i]]$predictive_samples, 
-						 y_true = region_results[[i]]$y,
-						 forecast_run = region_results[[i]]$forecast_run,
-						 plottitle = titles[i], 
-						 dates = dates
-						)
-			        })
-
-	(p <- wrap_plots(plots, ncol = 1))
-	return(p)
-
-}
 
 
 

@@ -236,8 +236,13 @@ add_average_model <- function(region_results) {
 	}
 	avg <- pred / length(region_results)
 
-	## add column with date and days ahead
-	avg <- cbind(region_results[[1]]$predictive_samples[,1:2], avg)
+	## add columns with country, model, date and days ahead
+	avg <- cbind(region_results[[1]]$predictive_samples$country, 
+				 region_results[[1]]$predictive_samples$model, 
+				 region_results[[1]]$predictive_samples$predicted_date,
+				 region_results[[1]]$predictive_samples$days_ahead,  	
+				 avg)
+	colnames(avg)[1:4] <- c("county", "model", "predicted_date", "days_ahead")
 
 
 	region_results$average$predictive_samples <- avg
