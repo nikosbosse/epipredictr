@@ -45,6 +45,13 @@ full_analysis <- function(data) {
 	names(all_region_results) <- countries
 	## ================================================================ #
 
+	## aggregate all country results into one data.frame
+	full_results <- lapply(all_region_results, 
+						   function(x) {
+						 	  return(x[["complete_region_results"]])
+						   })
+	full_results <- do.call(rbind, full_results)
+	rownames(full_results) <- NULL
 
 	## scoring ================================================== #
 	## do aggregated scoring
@@ -118,7 +125,8 @@ full_analysis <- function(data) {
 				inputdata = inputdata,
 				all_region_results = all_region_results,
 				scoring = scoring,
-				predictions_best = predictions_best)
+				predictions_best = predictions_best, 
+				full_results = full_results)
 
 	return(out)
 }
@@ -168,7 +176,7 @@ analysis_one_country <- function(data, country = "country", plot = F) {
 				 					  function(x) {
 									  	 return(x[["predictive_samples"]])
 									  })
-	
+
 	region_results <- add_average_model(region_results)
 
 	complete_region_results <- do.call(rbind, complete_region_results)
@@ -205,7 +213,8 @@ analysis_one_country <- function(data, country = "country", plot = F) {
 	return(list(country = country, 
 			    region_results = region_results,
 				scoring_table_region = scoring_table_region, 
-				forecast_plot_region = forecast_plot_region))
+				forecast_plot_region = forecast_plot_region, 
+			    complete_region_results = complete_region_results))
 }
 
 
