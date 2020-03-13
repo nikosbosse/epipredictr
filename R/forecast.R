@@ -164,8 +164,16 @@ analysis_one_country <- function(data, country = "country", plot = F) {
 	}
 
 	##aggregate region results into one data.frame
-
+	complete_region_results <- lapply(region_results, 
+				 					  function(x) {
+									  	 return(x[["predictive_samples"]])
+									  })
+	
 	region_results <- add_average_model(region_results)
+
+	complete_region_results <- do.call(rbind, complete_region_results)
+	rownames(complete_region_results) <- NULL
+	# eventually the add_average_model should be moved behind this probably
 
 	## do scoring
 	scoring_table_region <- compare_forecasts(region_results)
