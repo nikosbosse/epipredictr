@@ -42,7 +42,6 @@ scoring <- scoring(data, analysis$full_predictive_samples)
 
 
 
-
 plot_pred_vs_true(full_results, region, model)
 
 

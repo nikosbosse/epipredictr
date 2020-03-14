@@ -23,6 +23,11 @@ full_analysis <- function(data) {
 				  FUN = function(i) {
 				  	out <- tryCatch(
 				  		{
+				  			cat("start analysis ", 
+				  				as.character(i), " (", regions[i],
+				  				") ",  
+				  				"of ", as.character(length(regions)), 
+				  				"\n", sep = "")
 				  			analysis_one_region(region = regions[i],
 				  								data = data)
 				  		}, 
@@ -59,168 +64,6 @@ full_analysis <- function(data) {
 
 	return(out)
 }
-
-
-scoring <- function(data, full_predictive_samples) {
-
-	inputdata <- data$inputdata
-	models <- data$models
-	regions <- as.character(unique(inputdata$region))
-
-	score_model_in_region <- function(data, full_predictive_samples, region, model) {
-		inputdata <- data$inputdata
-
-		# select observations and predictions
-		index <- full_predictive_samples$model == model & full_predictive_samples$region == region
-		observations <- inputdata[inputdata$region == region, ] 
-		predictions <- full_predictive_samples[index, ]
-
-		predictions[, 1:7]
-
-		df <- merge(observations, predictions)
-		pred <- df[, grepl("sample", colnames(df))]
-
-		dss <- scoringRules::dss_sample(y = df$median, dat = as.matrix(pred))
-		crps <- scoringRules::crps_sample(y = df$median, dat = as.matrix(pred))
-
-		scores <- data.frame(date = df$date, 
-				   model = model, 
-				   region = region,
-				   days_ahead = df$days_ahead, 
-				   crps = crps, 
-				   dss = dss)
-
-		return(scores)
-	}
-
-
-	all_scores <- list()
-	for (region in regions) {
-		tmp <- lapply(seq_along(models), 
-					  FUN = function(i) {
-					  	score_model_in_region(data, 
-					  						  full_predictive_samples, 
-					  						  region, 
-					  						  models[i])
-					  })
-		scores_one_region <- do.call(rbind, tmp)
-		all_scores[[region]] <- scores_one_region
-	}	
-	all_scores <- do.call(rbind, all_scores)
-
-	return(all_scores)
-}
-
-
-
-
-
-
-
-
-	# if(isTRUE(plot)) {
-	# 	y <- inputdata[inputdata$region == country, 
-	# 			   colnames(inputdata) == "median"]
-	# 	compare_bsts_models(y)
-	# }
-
-	
-	## make plots with the predictive performance of all models in that region
-	# titles <- names(region_results)
-	# plots <- lapply(seq_along(region_results),
-	# 				FUN = function (i) {
-	# 					plot_pred_vs_true(
-	# 					 y_pred_samples = region_results[[i]]$predictive_samples, 
-	# 					 y_true = region_results[[i]]$y,
-	# 					 forecast_run = region_results[[i]]$forecast_run,
-	# 					 plottitle = titles[i], 
-	# 					 dates = dates
-	# 					)
-	# 		        })
-
-
-
-
-
-
-
-
-
-
-	## scoring ================================================== #
-	## do aggregated scoring
-	# scoring <- list()
-	# tables <- lapply(all_region_results, 
-	# 				 function(x) {
-	# 				 	return(x[["scoring_table_region"]])
-	# 				 })
-	# tables <- lapply(seq_along(tables),
- # 					 FUN = function(i) {
- # 					 	cbind(country = countries[i], tables[[i]])
- # 					 })
-	# table <- do.call(rbind, tables)
-
-	# scoring$across_country_scores <- table
-
-	# ## rank scores by mean and median
-	# table_mean <- aggregate(mean ~ method + model, table, mean)
-	# table_mean <- table_mean[order(table_mean$method, table_mean$mean), ]
-	# scoring$scores_ranked_mean <- table_mean
-
-	# table_median <- aggregate(mean ~ method + model, table, mean)
-	# table_median <- table_median[order(table_mean$method, table_mean$mean), ]
-	# scoring$scores_ranked_median <- table_median
-
-	# ## plot scores across countries
-	# scoring$lineplot <- ggplot(data = table,
-	# 	   	aes(y = mean, color = (model), x = country, group = model)) +
-	#   		geom_point() +
-	#   		geom_line() +
-	#   		facet_wrap(~ method, ncol = 1, scales = "free_y") +
-	#   		theme(text = element_text(family = 'Serif'))
-
-	# scoring$boxplot <- ggplot(data = table,
-	# 	   	aes(y = mean, color = (model), x = country, group = model)) +
-	#   		geom_boxplot() +
-	#   		facet_wrap(~ method, ncol = 1, scales = "free_y") +
-	#   		theme(text = element_text(family = 'Serif'))
-	## ========================================================== #
-
-
-
-
-	## find best model and make separate predictin plots ============ #
-	# best <- as.character(table_mean[1, colnames(table_mean) == "model"])
-
-	# predictions_best <- list()
-	# for (country in countries) {
-
-	# 	predictive_samples <- all_region_results[[country]]$region_results[[best]]$predictive_samples
-	# 	y <- all_region_results[[country]]$region_results[[best]]$y
-
-	# 	forecast_run <- all_region_results[[country]]$region_results[[best]]$forecast_run
-
-	# 	predictive_samples[!is.na(y), ] <- NA
-
-	# 	t <- paste(country, best, sep = "_")
-	# 	p <- plot_pred_vs_true(y_true = y,
-	# 						   y_pred_samples = predictive_samples,
-	# 						   forecast_run = forecast_run, vlines = F,
-	# 					  	   plottitle = t)
-	# 	predictions_best[[country]] <- p
-	# }
-	## ========================================================== #
-
-	## make case predictions with best model ============ #
-
-
-
-
-
-
-
-
-
 
 #' @title Do entire analysis for one country
 #'
@@ -264,6 +107,7 @@ analysis_one_region <- function(data, region = NULL, plot = F) {
 									  })
 
 	complete_region_results <- do.call(rbind, complete_region_results)
+
 	rownames(complete_region_results) <- NULL
 	# eventually the add_average_model should be moved behind this probably
 
@@ -408,3 +252,246 @@ add_average_model <- function(region_results) {
 	
 
 # }
+
+
+
+
+#' @title Do the scoring
+#'
+#' @description
+#' Missing.
+#' Also Todo: handling for only one item
+#' @param y
+#'
+#' @return
+#' Missing
+#' @examples
+#' NULL
+#' @export
+
+
+scoring <- function(data, full_predictive_samples) {
+
+	inputdata <- data$inputdata
+	models <- data$models
+	regions <- as.character(unique(inputdata$region))
+
+	score_model_in_region <- function(data, full_predictive_samples, region, model) {
+		inputdata <- data$inputdata
+
+		# select observations and predictions
+		index <- full_predictive_samples$model == model & full_predictive_samples$region == region
+		observations <- inputdata[inputdata$region == region, ] 
+		predictions <- full_predictive_samples[index, ]
+
+		predictions[, 1:7]
+
+		df <- merge(observations, predictions)
+		pred <- df[, grepl("sample", colnames(df))]
+
+		dss <- scoringRules::dss_sample(y = df$median, dat = as.matrix(pred))
+		crps <- scoringRules::crps_sample(y = df$median, dat = as.matrix(pred))
+
+		scores <- data.frame(date = df$date, 
+				   model = model, 
+				   region = region,
+				   days_ahead = df$days_ahead, 
+				   crps = crps, 
+				   dss = dss)
+
+		return(scores)
+	}
+
+
+	all_scores <- list()
+	for (region in regions) {
+		tmp <- lapply(seq_along(models), 
+					  FUN = function(i) {
+					  	score_model_in_region(data, 
+					  						  full_predictive_samples, 
+					  						  region, 
+					  						  models[i])
+					  })
+		scores_one_region <- do.call(rbind, tmp)
+		all_scores[[region]] <- scores_one_region
+	}	
+	all_scores <- do.call(rbind, all_scores)
+
+	return(all_scores)
+}
+
+aggregate_region_scores <- function(all_scores) {
+
+	# regions <- unique(all_scores$region)
+
+
+	# overall_region_scores <- list()
+
+	# for (region in regions) {
+	# 	index <- scoring$region == region
+	# 	region_scores <-  scoring[index, ]
+	# 	region_scores <- aggregate(. ~ model + days_ahead, region_scores, mean)
+
+	# 	region_scores <- subset(region_scores, select = -c(date))
+	# 	region_scores$region <- region 
+	# 	overall_region_scores[[region]] <- region_scores	
+	# }
+
+	# overall_region_scores <- do.call(rbind, overall_region_scores)
+
+	overall_region_scores <- aggregate(. ~ model + days_ahead + region,
+									   all_scores, 
+									   mean)
+
+	overall_region_scores <- subset(overall_region_scores, select = -c(date))
+	rownames(overall_region_scores) <- NULL
+
+	return(overall_region_scores)
+}
+
+
+aggregate_model_scores <- function(all_scores) {
+	regions <- unique(all_scores$region)
+	models <- unique(all_scores$model)
+
+	all_scores
+
+	region_scores <- aggregate(. ~ model + days_ahead, region_scores, mean)
+
+	
+
+	
+
+	df == overall_region_scores
+
+	overall_region_scores
+}
+
+head(all_scores)
+
+
+
+#' @title Do the plotting
+#'
+#' @description
+#' Missing.
+#' Also Todo: handling for only one item
+#' @param y
+#'
+#' @return
+#' Missing
+#' @examples
+#' NULL
+#' @export
+
+plot_scoring <- function(data, scoring) {
+
+	## plot 1 day ahead predictions
+
+	head(scoring)
+
+
+	# ## plot scores across countries
+	# scoring$lineplot <- ggplot(data = table,
+	# 	   	aes(y = mean, color = (model), x = country, group = model)) +
+	#   		geom_point() +
+	#   		geom_line() +
+	#   		facet_wrap(~ method, ncol = 1, scales = "free_y") +
+	#   		theme(text = element_text(family = 'Serif'))
+
+	# scoring$boxplot <- ggplot(data = table,
+	# 	   	aes(y = mean, color = (model), x = country, group = model)) +
+	#   		geom_boxplot() +
+	#   		facet_wrap(~ method, ncol = 1, scales = "free_y") +
+	#   		theme(text = element_text(family = 'Serif'))
+	## ========================================================== #
+
+}
+
+
+
+
+	# if(isTRUE(plot)) {
+	# 	y <- inputdata[inputdata$region == country, 
+	# 			   colnames(inputdata) == "median"]
+	# 	compare_bsts_models(y)
+	# }
+
+	
+	## make plots with the predictive performance of all models in that region
+	# titles <- names(region_results)
+	# plots <- lapply(seq_along(region_results),
+	# 				FUN = function (i) {
+	# 					plot_pred_vs_true(
+	# 					 y_pred_samples = region_results[[i]]$predictive_samples, 
+	# 					 y_true = region_results[[i]]$y,
+	# 					 forecast_run = region_results[[i]]$forecast_run,
+	# 					 plottitle = titles[i], 
+	# 					 dates = dates
+	# 					)
+	# 		        })
+
+
+
+
+
+
+
+
+
+
+	## scoring ================================================== #
+	## do aggregated scoring
+	# scoring <- list()
+	# tables <- lapply(all_region_results, 
+	# 				 function(x) {
+	# 				 	return(x[["scoring_table_region"]])
+	# 				 })
+	# tables <- lapply(seq_along(tables),
+ # 					 FUN = function(i) {
+ # 					 	cbind(country = countries[i], tables[[i]])
+ # 					 })
+	# table <- do.call(rbind, tables)
+
+	# scoring$across_country_scores <- table
+
+	# ## rank scores by mean and median
+	# table_mean <- aggregate(mean ~ method + model, table, mean)
+	# table_mean <- table_mean[order(table_mean$method, table_mean$mean), ]
+	# scoring$scores_ranked_mean <- table_mean
+
+	# table_median <- aggregate(mean ~ method + model, table, mean)
+	# table_median <- table_median[order(table_mean$method, table_mean$mean), ]
+	# scoring$scores_ranked_median <- table_median
+
+
+
+
+
+
+	## find best model and make separate predictin plots ============ #
+	# best <- as.character(table_mean[1, colnames(table_mean) == "model"])
+
+	# predictions_best <- list()
+	# for (country in countries) {
+
+	# 	predictive_samples <- all_region_results[[country]]$region_results[[best]]$predictive_samples
+	# 	y <- all_region_results[[country]]$region_results[[best]]$y
+
+	# 	forecast_run <- all_region_results[[country]]$region_results[[best]]$forecast_run
+
+	# 	predictive_samples[!is.na(y), ] <- NA
+
+	# 	t <- paste(country, best, sep = "_")
+	# 	p <- plot_pred_vs_true(y_true = y,
+	# 						   y_pred_samples = predictive_samples,
+	# 						   forecast_run = forecast_run, vlines = F,
+	# 					  	   plottitle = t)
+	# 	predictions_best[[country]] <- p
+	# }
+	## ========================================================== #
+
+	## make case predictions with best model ============ #
+
+
+
