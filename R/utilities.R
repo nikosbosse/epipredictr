@@ -62,7 +62,6 @@ load_all_timeseries <- function(base_dir = NULL, date = NULL, ts_type = "R") {
 				  })
 	dfs <- do.call(rbind, dfs)
 
-
 	return(dfs)
 }
 
@@ -98,6 +97,7 @@ load_single_timeseries <- function(base_dir, region, date = NULL,
 		df <- readRDS(file_path)[[1]]
 		df <- df[, colnames(df) %in% c("date", "median")]
 		df <- cbind(df, region = region)
+		colnames(df)[colnames(df) == "median"] <- "y"
 		return(df)
 	} else if (ts_type == "incidences") {
 
@@ -107,6 +107,8 @@ load_single_timeseries <- function(base_dir, region, date = NULL,
 			     colnames(df) %in% c("date", "median")]
 		df <- cbind(df, region = region)
 	}
+	colnames(df)[colnames(df) == "median"] <- "y"
+	return(df)
 }
 
 
@@ -192,10 +194,8 @@ fit_iteratively <- function(data,
 							...) {
 
 	inputdata <- data$inputdata
-	y = inputdata[inputdata$region == region,
-				  colnames(inputdata) == "median"]
-	dates = inputdata[inputdata$region == region,
-				      colnames(inputdata) == "date"]
+	y = inputdata$y[inputdata$region == region]
+	dates = inputdata$date[inputdata$region == region]
 	n_pred = data$n_pred
 	start_period = data$start_period
 	total_n <- length(y)
@@ -359,7 +359,7 @@ plot_pred_vs_true <- function(full_results,
 	plottitle <- paste("predictions for model", model, "in", region)
 
 	## make df with observed values
-	y_true <- inputdata$median[inputdata$region == region]
+	y_true <- inputdata$y[inputdata$region == region]
 	inputdates <- inputdata$date[inputdata$region == region]
 	obs <- data.frame(date = inputdates, 
 					  type = "observed", 
@@ -788,3 +788,44 @@ forecast_table <- function(results_region_model, region = NULL) {
 
 
 # }
+
+
+
+
+
+pit_cont <- function (y, dat) {
+
+	n_pred <- ncol(dat)
+	P_x <- vapply(seq_along(y),
+              function(i) {
+                sum(dat[i,] <= y[i]) / n_pred
+              },
+              .0)	
+	return(P_x)
+}
+
+
+num_bins <- round(sqrt(length(P_x)))
+hist_PIT <- ggplot(as.data.frame(P_x), aes(x = P_x)) + 
+			geom_histogram(color = 'darkblue', 
+						   fill = 'lightblue', bins = num_bins)
+
+calibration <- function(true_values, predictive_samples) {
+	P_x <- pit(true_values, predictive_samples)
+	goftest::ad.test(P_x)$p.value	
+}
+
+
+scoringutils::sharpness(predictive_samples)
+
+bias <- function(true_values, predictive_samples) {
+	n_pred <- ncol(predictive_samples)
+	## empirical cdf
+	P_x <- vapply(seq_along(true_values),
+              function(i) {
+                sum(predictions[i,] <= true_values[i]) / n_pred
+              },
+              .0)	
+	return(1 - P_x)
+}
+

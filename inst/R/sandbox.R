@@ -34,23 +34,8 @@ region = country = "austria"
 
 full_predictive_samples <- analysis$full_predictive_samples
 
-scoring <- scoring(data, analysis$full_predictive_samples)
-
-
-
-
-
-
-
-plot_pred_vs_true(full_results, region, model)
-
-
-
-
-
-
-
-
+all_scores <- scoring(data, analysis$full_predictive_samples)
+aggregate_scores <- aggregate_scores(all_scores)
 
 
 
