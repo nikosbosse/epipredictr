@@ -41,7 +41,10 @@ get_data <- function() {
 #' @references
 #' NULL
 
-load_all_timeseries <- function(base_dir = NULL, date = NULL, ts_type = "R") {
+load_all_timeseries <- function(base_dir = NULL, 
+								date = NULL, 
+								ts_type = "R", 
+								min_req_data = 6) {
 
 	if (is.null(base_dir)) {
 		base_dir <- "data/results"
@@ -55,6 +58,7 @@ load_all_timeseries <- function(base_dir = NULL, date = NULL, ts_type = "R") {
 				  	{ load_single_timeseries(base_dir,
 				  							   regions[i],
 				  							   date,
+				  							   min_req_data = min_req_data,
 				  							 ts_type = ts_type)
 				  	},
 				  	error=function(cond) {return(NULL)}
@@ -81,7 +85,7 @@ load_all_timeseries <- function(base_dir = NULL, date = NULL, ts_type = "R") {
 #' NULL
 
 load_single_timeseries <- function(base_dir, region, date = NULL,
-								   ts_type = NULL) {
+								   ts_type = NULL, min_req_data) {
 	
 	file_dir <- file.path(base_dir, region)
 
@@ -100,6 +104,8 @@ load_single_timeseries <- function(base_dir, region, date = NULL,
 		df <- df[, colnames(df) %in% c("date", "median")]
 		df <- cbind(df, region = region)
 		colnames(df)[colnames(df) == "median"] <- "y"
+
+		if (nrow(df) < min_req_data) return(NULL)
 		return(df)
 	} else if (ts_type == "incidences") {
 
