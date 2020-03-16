@@ -44,7 +44,7 @@ get_data <- function() {
 load_all_timeseries <- function(base_dir = NULL, date = NULL, ts_type = "R") {
 
 	if (is.null(base_dir)) {
-		base_dir <- "data/Rt_estimates"
+		base_dir <- "data/results"
 	}
 
 	regions <- list.files(base_dir)
@@ -82,6 +82,8 @@ load_all_timeseries <- function(base_dir = NULL, date = NULL, ts_type = "R") {
 
 load_single_timeseries <- function(base_dir, region, date = NULL,
 								   ts_type = NULL) {
+	
+	file_dir <- file.path(base_dir, region)
 
 	if (is.null(date)) {
 		## find latest date

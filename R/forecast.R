@@ -270,16 +270,17 @@ add_average_model <- function(region_results) {
 
 predict_incidences <- function (data, full_predictive_samples) {
 
-	cat("predict incidences ", 
-	as.character(i), " (", regions[i],
-	") ",  
-	"of ", as.character(length(regions)), 
-	"\n", sep = "")
+
 
 	regions <- unique(data$inputdata$region)
 
 	inc_pred <- lapply(seq_along(regions), 
 					   function(i) {
+					   		cat("predict incidences ", 
+							as.character(i), " (", regions[i],
+							") ",  
+							"of ", as.character(length(regions)), 
+							"\n", sep = "")
 					   		predict_incidences_one_region(full_predictive_samples, regions[i])
 					   })
 	return(do.call(rbind, inc_pred))
@@ -309,7 +310,7 @@ predict_incidences_one_region <- function(full_predictive_samples, region) {
 						select_cols <- grepl("sample", colnames(curr_r_pred))	
 
 						## infectiousness from observed data
-						inf_data <- infectiousness_from_true_data(days_ahead_forecast = days_ahead, data, 
+						inf_data <- infectiousness_from_true_data(days_ahead = days_ahead, data, 
 						region, date_of_prediction = dates[i])
 						
 						## infectiousness from predicted data
@@ -351,7 +352,7 @@ predict_incidences_one_region <- function(full_predictive_samples, region) {
 
 
 
-infectiousness_from_true_data <- function(days_ahead_forecast, 
+infectiousness_from_true_data <- function(days_ahead, 
 										  data, region, date_of_prediction,
 										  mean_si = NULL, sd_si = NULL) {
 
@@ -551,6 +552,7 @@ plot_scoring <- function(data, aggregate_scores) {
 	model_scores <- aggregate_scores$model_scores
 	mean_model_scores_region <- aggregate_scores$mean_model_scores_region
 
+	scores_model_in_region <- aggregate_scores$scores_model_in_region
 
 	model_scores_plot <- ggplot(data = model_scores,
 		   	aes(y = crps, x = model, color = model)) +

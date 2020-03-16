@@ -15,10 +15,11 @@ source("R/forecast.R")
 #
 # ======================================================== #
 
+
 models <- c("local", "semilocal", "local_student", "ar1", "ar2")
-inputdata <- load_all_timeseries(date = as.Date("2020-03-09"))
-inputdata <- inputdata[1:17, ]
-incidences <- load_all_timeseries(date = as.Date("2020-03-09"), ts_type = "incidences")
+inputdata <- load_all_timeseries()
+inputdata <- inputdata[1:50, ]
+incidences <- load_all_timeseries(ts_type = "incidences")
 
 data <- list(inputdata = inputdata, 
 			 last_date = max(inputdata$date),
@@ -37,8 +38,7 @@ full_predictive_samples <- analysis$full_predictive_samples
 all_scores <- scoring(data, analysis$full_predictive_samples)
 aggregate_scores <- aggregate_scores(all_scores)
 
-
-inc_austria <- predict_incidences_one_region(full_predictive_samples, region)
+plot_scoring <- plot_scoring(data, aggregate_scores)
 
 
 predict_incidences <- predict_incidences(data, full_predictive_samples)
