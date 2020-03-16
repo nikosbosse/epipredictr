@@ -269,102 +269,24 @@ add_average_model <- function(region_results) {
 #' @export
 
 predict_incidences <- function (data, full_predictive_samples) {
-	incidences <- data$incidences
-	y <- incidences$y[incidences$region == region]
-	t <- length(y)
 
-	max_days_ahead <- max(full_predictive_samples$days_ahead)
+	cat("predict incidences ", 
+	as.character(i), " (", regions[i],
+	") ",  
+	"of ", as.character(length(regions)), 
+	"\n", sep = "")
 
-	for (region in regions) P{
-		pred <- full_predictive_samples[full_predictive_samples$region == region, ]
+	regions <- unique(data$inputdata$region)
 
-			for (days_ahead in 1:max_days_ahead) {
-				pred_x_ahead <- pred[pred$days_ahead == days_ahead, ]
-				dates <- unique(pred_x_ahead$date)
-				
-				for (date in dates) {
-					tmp <- pred_x_ahead[pred_x_ahead$date == date, ]
-					inf_data <- infectiousness_from_true_data(days_ahead_forecast =days_ahead, data, 
-						region, date_of_prediction = date)
+	inc_pred <- lapply(seq_along(regions), 
+					   function(i) {
+					   		predict_incidences_one_region(full_predictive_samples, regions[i])
+					   })
+	return(do.call(rbind, inc_pred))
 
-					infectiousness <- 
-					index <- grepl("sample", colnames(tmp))
-					pred_inc <- cbind(tmp[, !index], tmp[, index] * infectiousness)
-				}
-
-		}
-	}
+}
 
 
-
-region = "austria"
-pred <- full_predictive_samples[full_predictive_samples$region == region, ]
-
-predicted_incidences <- list()
-## ===============================================
-## one day ahead
-days_ahead <- 1
-pred_x_ahead <- pred[pred$days_ahead == days_ahead, ]
-dates <- unique(pred_x_ahead$date)
-
-inc_one_ahead <- list()
-inc <- lapply(seq_along(dates), 
-						FUN = function(i) {
-							tmp <- pred_x_ahead[pred_x_ahead$date == dates[i], ]
-							inf_data <- infectiousness_from_true_data(days_ahead_forecast = days_ahead, data, 
-							region, date_of_prediction = dates[i])
-
-							infectiousness <- inf_data
-							index <- grepl("sample", colnames(tmp))
-							pred_inc <- cbind(tmp[, !index], tmp[, index] * infectiousness)
-							return(pred_inc)
-						})
-inc_one_ahead <- do.call(rbind, inc)
-
-predicted_incidences[[1]] <- inc_one_ahead
-
-## ===============================================
-## two day ahead
-days_ahead <- 2
-pred_x_ahead <- pred[pred$days_ahead == days_ahead, ]
-dates <- unique(pred_x_ahead$date)
-date <- dates[1]
-
-
-
-inc <- lapply(seq_along(dates), 
-						FUN = function(i) {
-							tmp <- pred_x_ahead[pred_x_ahead$date == dates[i], ]
-							inf_data <- infectiousness_from_true_data(days_ahead_forecast = days_ahead, data, 
-							region, date_of_prediction = dates[i])
-							w <- weight_case_x_days_ago(1)
-							select_cols <- grepl("sample", colnames(tmp))
-
-							last_date <- dates[i] - 1
-							select_rows <- inc_one_ahead$days_ahead == 1 & inc_one_ahead$date == last_date
-
-							infectiousness <- inf_data + w * inc_one_ahead[select_rows, select_cols]
-							
-							dim(infectiousness)
-							dim(tmp)
-
-							pred_inc <- cbind(tmp[, !index], tmp[, index] * infectiousness)
-							return(pred_inc)
-						})
-inc_two_ahead <- do.call(rbind, inc)
-
-
-predicted_incidences[[2]] <- inc_two_ahead
-
-
-## ===============================================
-## full for one country
-## ===============================================
-## two day ahead
-days_ahead <- 1
-
-
-inc_austria <- predict_incidences_one_region(full_predictive_samples, region)
 
 predict_incidences_one_region <- function(full_predictive_samples, region) {
 
@@ -372,15 +294,19 @@ predict_incidences_one_region <- function(full_predictive_samples, region) {
 	pred <- full_predictive_samples[full_predictive_samples$region == region, ]
 	max_days_ahead <- max(full_predictive_samples$days_ahead)
 	predicted_incidences <- list()
+	
 	for (days_ahead in 1:max_days_ahead) {
 		pred_x_ahead <- pred[pred$days_ahead == days_ahead, ]
 		dates <- unique(pred_x_ahead$date)
 		cat("step", as.character(days_ahead), "of", as.character(max_days_ahead), "\n")
+		
+
 		inc <- lapply(seq_along(dates), 
 					FUN = function(i) {
+						# cat(as.character(i), "of", as.character(length(dates)))
 						## select current predictive R0 samples 
 						curr_r_pred <- pred_x_ahead[pred_x_ahead$date == dates[i], ]
-						select_cols <- grepl("sample", colnames(tmp))	
+						select_cols <- grepl("sample", colnames(curr_r_pred))	
 
 						## infectiousness from observed data
 						inf_data <- infectiousness_from_true_data(days_ahead_forecast = days_ahead, data, 
@@ -404,7 +330,7 @@ predict_incidences_one_region <- function(full_predictive_samples, region) {
 								prev_pred_inc <- predicted_incidences[[predictions_to_select]]
 								prev_pred_inc <- prev_pred_inc[prev_pred_inc$date == curr_prev_date, ]
 
-								inf[[predictions_to_select]] <- prev_pred_inc[, index] * weight_case_x_days_ago(diff_to_curr)
+								inf[[predictions_to_select]] <- prev_pred_inc[, select_cols] * weight_case_x_days_ago(diff_to_curr)
 							}
 							infectiousness <- Reduce("+", inf) + inf_data
 						}
@@ -415,213 +341,15 @@ predict_incidences_one_region <- function(full_predictive_samples, region) {
 					})
 
 		predicted_incidences[[days_ahead]] <- do.call(rbind, inc)
-
 	}
 
 	return(do.call(rbind, predicted_incidences))
 
 }
 
-inc_austria[, 1:10]
 
 
 
-
-
-
-dim(infectiousness)
-
-
-
-
-inc <- lapply(seq_along(dates), 
-				FUN = function(i) {
-					## select current predictive R0 samples 
-					curr_r_pred <- pred_x_ahead[pred_x_ahead$date == dates[i], ]
-					select_cols <- grepl("sample", colnames(tmp))	
-
-					## infectiousness from observed data
-					inf_data <- infectiousness_from_true_data(days_ahead_forecast = days_ahead, data, 
-					region, date_of_prediction = dates[i])
-					
-					## infectiousness from predicted data
-					last_date_of_observed_data <- as.Date(date) - days_ahead
-					prev_pred_dates <- last_date_of_observed_data + 1:days_ahead
-					prev_pred_dates <- prev_pred_dates[-length(prev_pred_dates)]
-
-					if (length(prev_pred_dates) == 0) {
-						infectiousness <- inf_data
-					} else {
-						inf <- list()
-						for (curr_prev_date in prev_pred_dates) {
-							
-							curr_prev_date <- as.Date(curr_prev_date)
-							diff_to_curr <- as.numeric(as.Date(date) - curr_prev_date)
-							predictions_to_select <- days_ahead - diff_to_curr
-
-							prev_pred_inc <- predicted_incidences[[predictions_to_select]]
-							prev_pred_inc <- prev_pred_inc[prev_pred_inc$date == curr_prev_date, ]
-
-							inf[[predictions_to_select]] <- prev_pred_inc[, index] * weight_case_x_days_ago(diff_to_curr)
-						}
-						infectiousness <- Reduce("+", inf) + inf_data
-					}
-
-					pred_inc <- cbind(curr_r_pred[, !select_cols], 
-									  curr_r_pred[, select_cols] * infectiousness)
-					return(pred_inc)
-				})
-
-inc_three_ahead <- do.call(rbind, inc)
-
-inc_one_ahead[, 1:10]
-
-
-
-
-
-dim(curr_r_pred[, select_cols])
-dim(infectiousness)
-
-curr_prev_date <- as.Date(date) - as.Date(curr_prev_date)
-
-					a <- 2
-					i <- days_ahead = 3
-
-	
-					predicted_incidences[[predictions_to_select]][, 1:10]
-
-						w <- weight_case_x_days_ago(1)
-				
-
-					w <- weight_case_x_days_ago(1)
-					select_cols <- grepl("sample", colnames(tmp))
-
-					last_date <- dates[i] - 1
-					select_rows <- inc_one_ahead$days_ahead == 1 & inc_one_ahead$date == last_date
-
-					infectiousness <- inf_data + w * inc_one_ahead[select_rows, select_cols]
-					
-					dim(infectiousness)
-					dim(tmp)
-
-					pred_inc <- cbind(tmp[, !index], tmp[, index] * infectiousness)
-					return(pred_inc)
-						})
-inc_two_ahead <- do.call(rbind, inc)
-
-
-inc_two_ahead[, 1:10]
-
-
-
-
-
-
-
-days_ahead <- 2
-pred_x_ahead <- pred[pred$days_ahead == days_ahead, ]
-dates <- unique(pred_x_ahead$date)
-
-date <- dates[1]
-
-
-inc_one_ahead[, 1:10]
-tmp[, 1:10]
-
-
-
-
-for (date in dates) {
-	inc <- lapply(seq_along(dates), 
-							FUN = function(i) {
-								tmp <- pred_x_ahead[pred_x_ahead$date == dates[i], ]
-								inf_data <- infectiousness_from_true_data(days_ahead_forecast = days_ahead, data, 
-								region, date_of_prediction = dates[i])
-								w <- weight_case_x_days_ago(1)
-								select_cols <- grepl("sample", colnames(tmp))
-
-								last_date <- dates[i] - 1
-								select_rows <- inc_one_ahead$days_ahead == 1 & inc_one_ahead$date == last_date
-
-								infectiousness <- inf_data + w * inc_one_ahead[select_rows, select_cols]
-								
-								dim(infectiousness)
-								dim(tmp)
-
-								pred_inc <- cbind(tmp[, !index], tmp[, index] * infectiousness)
-								return(pred_inc)
-							})
-	inc_one_ahead[[date]] <- do.call(rbind, inc)
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-tmp <- pred_x_ahead[pred_x_ahead$date == date, ]
-inf_data <- infectiousness_from_true_data(days_ahead_forecast =days_ahead, data, 
-						region, date_of_prediction = date)
-
-infectiousness <- index <- grepl("sample", colnames(tmp))
-pred_inc <- cbind(tmp[, !index], tmp[, index] * infectiousness)	
-
-
-## two days ahead
-days_ahead <- 2
-
-inf_data <- infectiousness_from_true_data(days_ahead_forecast=days_ahead, data, 
-						region, date_of_prediction = date)
-
-weight_case_x_days_ago(num_days_ago = 1)
-
-index <- grepl("sample", colnames(tmp))
-pred_inc <- cbind(tmp[, !index], tmp[, index] * infectiousness)
-
-a <- inf_data + pred_inc[index] * weight_case_x_days_ago(num_days_ago = 1)
-
-
-
-
-
-
-
-
-
-
-date
-
-infectiousness <- function(infectiousness_from_obs_data, 
-						   days_ahead_of_forecast, 
-						   region, date_of_prediction) {
-
-	if (days_ahead_of_forecast == 1) {
-		return (infectiousness_from_obs_data)
-	}
-
-
-}
-
-
-
-
-predicted_incidences <- 
-
-i = 1
-
-
-infectiousness_from_true_data
 
 infectiousness_from_true_data <- function(days_ahead_forecast, 
 										  data, region, date_of_prediction,
@@ -641,7 +369,6 @@ infectiousness_from_true_data <- function(days_ahead_forecast,
 
 		w <- sapply(num_obs:1, weight_case_x_days_ago)
 		return (sum(w * y))
-	}	
 }
 
 
@@ -655,42 +382,6 @@ weight_case_x_days_ago <- function(num_days_ago,
 	return(pgamma(num_days_ago + 0.5, alpha_gamma, beta_gamma) -
      pgamma(num_days_ago - 0.5, alpha_gamma, beta_gamma))
 }
-
-
-
-
-my_infectiousness <- function(past_incidences, n_pred = 0){
-	## inputs: past_incidences
-	## number of timesteps to forecast n_pred
-	
-	
-
-
-
-
-    #infectiousness[1:10] <- 1
-
-    infectiousness_weekly <- rep(0, times = t/7)
-    for (i in 1:length(infectiousness_weekly)){
-    	infectiousness_weekly[i] <- sum(infectiousness[(7*(i-1)+1):(7*i)])
-    }
-
-    infectiousness_pred = 0
-    for (i in 1:(t)){
-      infectiousness_pred = infectiousness_pred + past_incidences[i] * w[t + 1 - i]
-    }
-    
-  }
-  l <- list(weights = w, infectiousness = infectiousness, infectiousness_one_ahead = infectiousness_pred, infectiousness_weekly = infectiousness_weekly)
-  return(l)
-
-  ## output: 
-  ## weights (cut after 40 periods)
-  ## calculated infectiousness
-  ## one step ahead calculation of infectiousness
-}
-
-
 
 
 

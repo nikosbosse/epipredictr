@@ -38,6 +38,10 @@ all_scores <- scoring(data, analysis$full_predictive_samples)
 aggregate_scores <- aggregate_scores(all_scores)
 
 
+inc_austria <- predict_incidences_one_region(full_predictive_samples, region)
+
+
+predict_incidences <- predict_incidences(data, full_predictive_samples)
 
 
 

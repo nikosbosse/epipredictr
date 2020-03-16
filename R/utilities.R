@@ -805,10 +805,10 @@ pit_cont <- function (y, dat) {
 }
 
 
-num_bins <- round(sqrt(length(P_x)))
-hist_PIT <- ggplot(as.data.frame(P_x), aes(x = P_x)) + 
-			geom_histogram(color = 'darkblue', 
-						   fill = 'lightblue', bins = num_bins)
+# num_bins <- round(sqrt(length(P_x)))
+# hist_PIT <- ggplot(as.data.frame(P_x), aes(x = P_x)) + 
+# 			geom_histogram(color = 'darkblue', 
+# 						   fill = 'lightblue', bins = num_bins)
 
 calibration <- function(true_values, predictive_samples) {
 	P_x <- pit(true_values, predictive_samples)
@@ -816,7 +816,6 @@ calibration <- function(true_values, predictive_samples) {
 }
 
 
-scoringutils::sharpness(predictive_samples)
 
 bias <- function(true_values, predictive_samples) {
 	n_pred <- ncol(predictive_samples)
