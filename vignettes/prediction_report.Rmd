@@ -53,11 +53,16 @@ source("../R/forecast.R")
 
 ```{r load-data, include=FALSE}
 
-inputdata <- load_all_timeseries(base_dir = "../data/Rt_estimates", date = as.Date("2020-03-09"))
-inputdata <- inputdata[1:17, ]
-incidences <- load_all_timeseries(base_dir = "../data/Rt_estimates", 
-                                  date = as.Date("2020-03-09"), 
-                                  ts_type = "incidences")
+analysis <- readRDS("../data/analysis/analysis.rds")
+full_predictive_samples <- analysis$full_predictive_samples
+
+all_scores <- readRDS("../data/analysis/all_scores.rds")
+
+aggregate_scores <- readRDS("../data/analysis/aggregate_scores.rds")
+
+plot_scoring <-- readRDS("../data/analysis/plot_scoring.rds")
+
+plot_predictions <- readRDS("../data/analysis/plot_predictions.rds")
 
 
 
@@ -66,141 +71,203 @@ incidences <- load_all_timeseries(base_dir = "../data/Rt_estimates",
 ```{r do-analysis, include=FALSE}
 
 models <- c("local", "semilocal", "local_student", "ar1", "ar2")
-data <- list(inputdata = inputdata,
-             last_date = max(inputdata$date),
+data <- list(inputdata = inputdata, 
+			 last_date = max(inputdata$date),
              models = models,
              incidences = incidences,
              n_pred = 7,
              start_period = 4)
 
-analysis <- full_analysis(data)
+# analysis <- full_analysis(data)
+# full_predictive_samples <- analysis$full_predictive_samples
+# 
+# all_scores <- scoring(data, analysis$full_predictive_samples)
+# 
+# aggregated_scores <- aggregate_scores(all_scores)
+# 
+# 
+# 
+# plot_scoring <- plot_scoring(data, aggregated_scores)
 
 
 
-prediction_results <- lapply(
-  seq_along(analysis$countries),
-  FUN = function(i) {
-    region <- analysis$countries[i]
-    results_region_model <-
-      analysis$all_region_results[[region]]$region_results$average
-    forecast_table(results_region_model, region)
-  }
-)
 
-summary_prediction_result <- do.call(rbind, prediction_results)
+# predict_incidences <- predict_incidences(data, full_predictive_samples)
+
+
+# 
+# prediction_results <- lapply(
+#   seq_along(analysis$countries),
+#   FUN = function(i) {
+#     region <- analysis$countries[i]
+#     results_region_model <-
+#       analysis$all_region_results[[region]]$region_results$average
+#     forecast_table(results_region_model, region)
+#   }
+# )
+# 
+# summary_prediction_result <- do.call(rbind, prediction_results)
 
 ```
 
 
-# Summary {.tabset}
+# Summary
 
 ### Aim
 Forecast the time-varying $R_t$ estimates into the future to get a sense of the trajectory of the COVID-19 epidemic in different countries. 
 
+### Abstract
+some abstract.
+
 ## Key Results {.tabset}
-
-
 ### graph
+Here will be a graph with predictions made by the best model
 ```{r Summary-results-graph}
-patchwork::wrap_plots(analysis$predictions_best, ncol = 2)
+# patchwork::wrap_plots(analysis$predictions_best, ncol = 2)
 
 ```
 
 ### table
+Here will be a table that summarises predictions made by the best model
 ```{r Summary-results}
-knitr::kable(summary_prediction_result[,-1])
+# knitr::kable(summary_prediction_result[,-1])
 ```
 
+## Methods  {.tabset}
 
-## Abstract
+### Summary
+- We used different Bayesian Structural Time Series Models from the R package bsts to forecast transmission rates ($R_0$). 
+- Transmission rates were obtained according to https://cmmid.github.io/topics/covid19/current-patterns-transmission/global-time-varying-transmission.html. 
 
-## Methods
-We used different Bayesian Structural Time Series models
+- The following Bayesian Structural Time Series Models were used: 
 
-1. Local Trend
-2. BSTS with a global trend
-3. BSTS with a local trend
-4. BSTS with an AR 1
+   1. BSTS with a local trend
+   2. BSTS with a global trend
+   3. BSTS with a local trend and a Student's-t-distribution 
+   4. BSTS with an AR 1
+   5. BSTS with an AR 2
 
-to forecast transmission rates. Predictions were made using R and Stan and the 
-bsts package and results were scored using CRPS and LogS using the scoringRules 
-package. 
-
-
-# Details {.tabset}
-
-## Methods {.tabset}
+- Results were assessed for calibration, bias, and sharpness and scored using the proper scoring rules CRPS and LogS with the scoringRules package.
 
 ### Limitations
 
-## Scoring {.tabset}
+#### $R_t$-estimates
+- All limitations for estimating $R_t$ apply, especially: 
 
-### Boxplot
-```{r Scoring-boxplot}
-analysis$scoring$boxplot
+#### others
+- time horizon
+- linear trends --> would be good to have sth quadratic or sth following the derivative
+
+
+### Detail
+
+#### **Obtaining Estimates for $R_0$**
+see https://cmmid.github.io/topics/covid19/current-patterns-transmission/global-time-varying-transmission.html
+We obtain a time series with the median of estimated $R_t$ values. This time series is used for predictions. 
+
+#### **Predicitions**
+The time series is then forecasted into the future using the R package bsts. Forecasts are made every day for up to 7 days ahead. This allows us to validate the predictions against actual observations when they come in. For every time point we have multiple predictive samples, each based on different data x days ago, where x corresponds to the number of days forecasted into the future. The following models were used: 
+
+
+
+##### BSTS with a local linear trend
+
+The time series is modeled as 
+$$\mu_t+1 = \mu+t + \delta_t + \epsilon_t, \quad \epsilon_t \sim \mathcal{N}(0, \sigma_{\mu}), $$
+$$\delta_t = \delta_t + \eta_t, \quad \eta_t \sim \mathcal{N}(0, \sigma_{\delta}). $$
+The local linear trend model therefore assumes that both the mean of the time series as well as the slope follow random walks. 
+
+***
+##### BSTS with a local linear trend and Student's-t-distributed errors
+The model specification is very similar to the local linear trend model. The only change is that random errors now follow a t-distribution, which implies thicker tails and therefore more room for extreme changes. 
+$$\mu_t+1 = \mu+t + \delta_t + \epsilon_t, \quad \epsilon_t \sim \mathcal{T}_{\nu_{\mu}}(0, \sigma_{\mu}), $$
+$$\delta_{t+1} = \delta_t + \eta_t, \quad \eta_t \sim \mathcal{T}_{\nu_{\delta}}(0, \sigma_{\delta}). $$
+$\nu_{\mu}$ and $\nu_{\delta}$ are parameters that determine the thickness of the tails. 
+
+***
+##### BSTS with a semi-local linear trend
+The semi-local linear trend model assumes that the mean of the time series moves according to a random walk with slope. The slope component is an AR1 process centred on a constant trend D. For any non-zero value $\phi$, the slope will eventually become a constant number for long time horizons, resulting in a linear trend for the overall time series. Values of $\phi$ closer to one imply that the time series (or forecasts made by the model, respectively) will converge quicker to a purely linear trend. 
+The time series is modeled as
+$$\mu_t+1 = \mu+t + \delta_t + \epsilon_t, \quad \epsilon_t \sim \mathcal{N}(0, \sigma_{\mu}), $$
+$$\delta_{t+1} = D + \phi (\delta_t -D), \quad \eta_t \sim \mathcal{N}(0, \sigma_{\delta}). $$
+
+
+Maybe: plots for different trend values we made earlier. 
+
+***
+##### BSTS with an AR1 and AR2 state component
+The mean of the time series is modeled as an AR(1)-process (or AR(2), respectively). The AR(1) model looks like this:
+
+$$\alpha_t = \phi_1 \alpha_{t-1} + \epsilon_{t-1}, \quad \epsilon_t \sim \mathcal{N}(0, \sigma_{\delta}). $$
+The AR(2) model looks like this:
+$$\alpha_t = \phi_1 \alpha_{t-1} + \phi_2 \alpha_{t-2} + \epsilon_{t-1}, \quad \epsilon_t \sim \mathcal{N}(0, \sigma_{\delta}). $$
+***
+##### Model stacking
+yet to be implemented
+
+
+#### **Scoring**
+
+
+##### PIT and calibration
+
+##### bias
+
+##### sharpness
+
+##### CRPS
+
+##### DSS
+
+
+# Scoring {.tabset}
+
+## Performance of 7-days-ahead-forecasts
+
+## Performance across different forecasting horizons {.tabset}
+
+### Calibration / PIT
+
+### Bias
+
+### Sharpness
+
+### CRPS 
+
+```{r Scoring-boxplot-different-horizons}
+
+# plot_scoring$score_days_ahead
+
+## maybe split in boxplot and lineplot
+
 ```
 
-### Lineplot
-```{r Scoring-lineplot}
-analysis$scoring$lineplot
-```
+### DSS
 
-### total scores
+
+## Scoring Tables {.tabset}
+
+### Aggregated scores
+
+
+
+### All scores
 ```{r Scoring-total-scores}
 knitr::kable(analysis$scoring$across_country_scores)
 ```
 
-### mean score across countries
-```{r Scoring-ranked-mean}
-knitr::kable(analysis$scoring$scores_ranked_mean)
-```
-
-## Results by country {.tabset}
-
-### South Korea {.tabset}
-
-#### Prediction vs. Actual
-
-```{r South-Korea, fig.width=10, fig.height=18}
-analysis$country_results$South_Korea$forecast_plot
-
-```
-
-### Prediction Scores
 
 
-### Japan {.tabset}
 
-#### Prediction vs. Actual
+# Detailed Results by country {.tabset}
+
+## Japan {.tabset}
+
+### Prediction vs. Actual
 
 ```{r Japan, fig.width=10, fig.height=18}
 analysis$country_results$Japan$forecast_plot
 
 ```
 
-#### Prediction Scores
-
-
-### Singapore {.tabset}
-
-#### Prediction vs. Actual
-
-```{r Singapore, fig.width=10, fig.height=18}
-analysis$country_results$Singapore$forecast_plot
-
-```
-
-#### Prediction Scores
-
-
-
-### Italy {.tabset}
-
-#### Prediction vs. Actual
-
-```{r Italy, fig.width=10, fig.height=18}
-analysis$country_results$Italy$forecast_plot
-
-```
-
-#### Prediction Scores
+### Prediction Scores

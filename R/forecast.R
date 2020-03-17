@@ -14,38 +14,41 @@
 full_analysis <- function(data) {
 
 	inputdata <- data$inputdata
-	countries <- as.character(unique(inputdata$region))
+	regions <- as.character(unique(inputdata$region))
 	models <- data$models
 
-
-	# analysis by country ============================================= #
+	# analysis by region ============================================= #
 	## collect results country-wise
-	all_region_results <- lapply(seq_along(countries),
-
-				  FUN = function(i) {
+	all_region_results <- furrr::future_map(seq_along(regions),
+		function(i) {
 				  	out <- tryCatch(
 				  		{
-				  			analysis_one_country(country = countries[i],
+				  			cat("start analysis ", 
+				  				as.character(i), " (", regions[i],
+				  				") ",  
+				  				"of ", as.character(length(regions)), 
+				  				"\n", sep = "")
+				  			analysis_one_region(region = regions[i],
 				  								data = data)
 				  		}, 
 				  		error = function(cond) {
 				  			warning(cond)
-				  			warning(paste("Issue with region", countries[i]))
+				  			warning(paste("Issue with region", regions[i]))
 				  			return(NULL)
 				  		}
 				  	)
 				  	return(out)
-				  })
+				  }, .progress = TRUE)
 
 	failure <- lapply(all_region_results, is.null)
 	failure <- do.call(c, failure)
 
 	all_region_results <- all_region_results[!failure]
-	countries <- countries[!failure]
-	names(all_region_results) <- countries
+	regions <- regions[!failure]
+	names(all_region_results) <- regions
 	## ================================================================ #
 
-	## aggregate all country results into one data.frame
+	## aggregate all region results into one data.frame
 	full_results <- lapply(all_region_results, 
 						   function(x) {
 						 	  return(x[["complete_region_results"]])
@@ -53,88 +56,14 @@ full_analysis <- function(data) {
 	full_results <- do.call(rbind, full_results)
 	rownames(full_results) <- NULL
 
-	## scoring ================================================== #
-	## do aggregated scoring
-	scoring <- list()
-	tables <- lapply(all_region_results, 
-					 function(x) {
-					 	return(x[["scoring_table_region"]])
-					 })
-	tables <- lapply(seq_along(tables),
- 					 FUN = function(i) {
- 					 	cbind(country = countries[i], tables[[i]])
- 					 })
-	table <- do.call(rbind, tables)
 
-	scoring$across_country_scores <- table
-
-	## rank scores by mean and median
-	table_mean <- aggregate(mean ~ method + model, table, mean)
-	table_mean <- table_mean[order(table_mean$method, table_mean$mean), ]
-	scoring$scores_ranked_mean <- table_mean
-
-	table_median <- aggregate(mean ~ method + model, table, mean)
-	table_median <- table_median[order(table_mean$method, table_mean$mean), ]
-	scoring$scores_ranked_median <- table_median
-
-	## plot scores across countries
-	scoring$lineplot <- ggplot(data = table,
-		   	aes(y = mean, color = (model), x = country, group = model)) +
-	  		geom_point() +
-	  		geom_line() +
-	  		facet_wrap(~ method, ncol = 1, scales = "free_y") +
-	  		theme(text = element_text(family = 'Serif'))
-
-	scoring$boxplot <- ggplot(data = table,
-		   	aes(y = mean, color = (model), x = country, group = model)) +
-	  		geom_boxplot() +
-	  		facet_wrap(~ method, ncol = 1, scales = "free_y") +
-	  		theme(text = element_text(family = 'Serif'))
-	## ========================================================== #
-
-
-
-
-	## find best model and make separate predictin plots ============ #
-	best <- as.character(table_mean[1, colnames(table_mean) == "model"])
-
-	predictions_best <- list()
-	for (country in countries) {
-
-		predictive_samples <- all_region_results[[country]]$region_results[[best]]$predictive_samples
-		y <- all_region_results[[country]]$region_results[[best]]$y
-
-		forecast_run <- all_region_results[[country]]$region_results[[best]]$forecast_run
-
-		predictive_samples[!is.na(y), ] <- NA
-
-		t <- paste(country, best, sep = "_")
-		p <- plot_pred_vs_true(y_true = y,
-							   y_pred_samples = predictive_samples,
-							   forecast_run = forecast_run, vlines = F,
-						  	   plottitle = t)
-		predictions_best[[country]] <- p
-	}
-	## ========================================================== #
-
-	## make case predictions with best model ============ #
-
-
-
-	out <- list(countries = countries,
+		out <- list(regions = regions,
 				inputdata = inputdata,
 				all_region_results = all_region_results,
-				scoring = scoring,
-				predictions_best = predictions_best, 
-				full_results = full_results)
+				full_predictive_samples = full_results)
 
 	return(out)
 }
-
-
-
-
-
 
 
 
@@ -152,11 +81,11 @@ full_analysis <- function(data) {
 #' @export
 #'
 
-analysis_one_country <- function(data, country = "country", plot = F) {
+analysis_one_region <- function(data, region = NULL, plot = F) {
 
 	models <- data$models
 	inputdata <- data$inputdata
-	dates = inputdata[inputdata$region == country,	
+	dates = inputdata[inputdata$region == region,	
 			      colnames(inputdata) == "date"]	
 
 	## do forecasting
@@ -166,10 +95,12 @@ analysis_one_country <- function(data, country = "country", plot = F) {
 	for (model in models) {
 		name <- paste("bsts_", model, sep = "")
 		region_results[[name]] <- fit_iteratively(data, 
-												  country = country, 
+												  region = region, 
 									      		  model = model, 
 									      		  fit_type = "bsts_package")
 	}
+
+	# region_results <- add_average_model(region_results)
 
 	##aggregate region results into one data.frame
 	complete_region_results <- lapply(region_results, 
@@ -177,43 +108,23 @@ analysis_one_country <- function(data, country = "country", plot = F) {
 									  	 return(x[["predictive_samples"]])
 									  })
 
-	region_results <- add_average_model(region_results)
-
 	complete_region_results <- do.call(rbind, complete_region_results)
+
 	rownames(complete_region_results) <- NULL
 	# eventually the add_average_model should be moved behind this probably
 
-	## do scoring
-	scoring_table_region <- compare_forecasts(region_results)
-
-	if(isTRUE(plot)) {
-		y <- inputdata[inputdata$region == country, 
-				   colnames(inputdata) == "median"]
-		compare_bsts_models(y)
-	}
-
-	
-	## make plots with the predictive performance of all models in that region
-	titles <- names(region_results)
-	plots <- lapply(seq_along(region_results),
-					FUN = function (i) {
-						plot_pred_vs_true(
-						 y_pred_samples = region_results[[i]]$predictive_samples, 
-						 y_true = region_results[[i]]$y,
-						 forecast_run = region_results[[i]]$forecast_run,
-						 plottitle = titles[i], 
-						 dates = dates
-						)
-			        })
-
-	forecast_plot_region <- wrap_plots(plots, ncol = 1)
+	# if(isTRUE(plot)) {
+	# 	y <- inputdata[inputdata$region == country, 
+	# 			   colnames(inputdata) == "median"]
+	# 	compare_bsts_models(y)
+	# }
 
 
 
-	return(list(country = country, 
+
+	return(list(region = region, 
 			    region_results = region_results,
-				scoring_table_region = scoring_table_region, 
-				forecast_plot_region = forecast_plot_region, 
+				#forecast_plot_region = forecast_plot_region, 
 			    complete_region_results = complete_region_results))
 }
 
@@ -238,6 +149,191 @@ analysis_one_country <- function(data, country = "country", plot = F) {
 	# 								  n_pred = 7, iter = 5000,
 	# 								  max_n_past_obs = 7, vb = FALSE)
 	# }
+
+
+
+#' @title Iteratively fit a model to the data
+#'
+#' @description
+#'
+#' @param incidences Vector of length n with the past incidences used to
+#' fit the model and make predictions.
+#' @param n_pred prediction horizon, i.e. number of days to predict into the
+#' future
+#' @param interval interval between predictions. Maybe delete?
+#' @param max_n_past_obs maximum number of past observations to take into
+#' account
+#'
+#' @return
+#' a data.frame with the data
+#'
+#' @importFrom nCov2019 load_nCov2019
+#'
+#' @examples
+#' NULL
+#' @export
+#' @references
+#' NULL
+
+
+fit_iteratively <- function(data,
+							region,
+							in_between_pred = T,
+							max_n_past_obs = Inf,
+							model = "local",
+							n_samples = 4000,
+							vb = FALSE,
+							fit_type = "bsts_package",
+							length_local_trend = 7,
+							iter = 4000,
+							...) {
+
+	inputdata <- data$inputdata
+	y = inputdata$y[inputdata$region == region]
+	dates = inputdata$date[inputdata$region == region]
+	n_pred = data$n_pred
+	start_period = data$start_period
+	total_n <- length(y)
+
+	## initialize empty lists to hold the results
+	predictive_samples <- list()
+	forecast_run <-list()
+	stanfitobjects <- list()
+
+	current_last_obs <- start_period - 1
+	if (current_last_obs > total_n) {
+		stop("start_period later than length of series")
+	}
+
+	run <- 1
+	for (curr_last_data_point in current_last_obs:total_n) {
+		
+		## determine current indices
+		index <- 1:curr_last_data_point
+		if (length(index) > max_n_past_obs) {
+			current_earliest_obs <- length(index) - max_n_past_obs + 1
+			index <- index[current_earliest_obs:current_last_obs]
+		}
+
+		# get current data and corresponding dates
+		y_curr <- y[index]
+		curr_dates <- dates[index]
+
+		if (fit_type == "stan") {
+			# stanfit <- fit_stan_model(y_curr, model, n_pred = n_pred, vb = vb,
+			# 					      length_local_trend = length_local_trend,
+			# 					      iter = iter)
+			# stanfitobjects[[i]] <- stanfit
+			# predictive_samples[[i]] <- extract_samples(stanfit)
+		} else {
+			predictive_samples[[run]] <- bsts_wrapper(y = y_curr,
+													dates = curr_dates,
+													model = model,
+													num_pred  = n_pred)
+
+		}
+		forecast_run[[run]] <- rep(run, n_pred)
+
+		run <- run + 1
+	}
+
+    predictive_samples <- do.call("rbind", predictive_samples)
+
+    forecast_run <- do.call("c", forecast_run)
+
+    predictive_samples <- cbind(forecast_run = forecast_run, 
+    							region = region, 
+								model = model, 
+								type = "predicted",
+								predictive_samples)
+
+	return(list(predictive_samples = predictive_samples,
+		        forecast_run = forecast_run,
+		        stanfitobjects = stanfitobjects,
+		    	y = y))
+
+}
+
+
+
+#' @title Fit model
+#'
+#' @description
+#' Wrapper around different lower level fit functions
+#' @param y Vector of length n with the true values
+#' fit the model and make predictions.
+#' @param model Missing
+#'
+#' @return
+#' Missing
+#' @examples
+#' NULL
+#' @export
+
+predict_with_model <- function(y, model, num_pred, stan = F) {
+
+	if (isTRUE(stan)) {
+
+	} else {
+		return(bsts_wrapper(y, model, num_pred = num_pred))
+	}
+}
+
+
+
+
+#' @title Wrapper around the functions from the bsts package
+#'
+#' @description
+#' Missing.
+#' Also Todo: handling for only one item
+#' @param dates The dates for the data that is uses for the prediction.
+#' We need the last date in order to specify the date for which the predictions
+#' are made
+#'
+#' @return
+#' Missing
+#' @examples
+#' NULL
+#' @export
+
+bsts_wrapper <- function(y, model,
+						 num_pred = NULL,
+						 dates = dates,
+						 n_iter = 2000) {
+	if (model == "semilocal") {
+		ss <- AddSemilocalLinearTrend(list(), y)
+	} else if (model == "local"){
+		ss <- AddLocalLinearTrend(list(), y)
+	} else if (model == "local_student"){
+		ss <- AddStudentLocalLinearTrend(list(), y)
+	} else if (model == "ar1"){
+		ss <- AddAr(list(), y, lags = 1)
+	} else if (model == "ar2"){
+		ss <- AddAr(list(), y, lags = 2)
+	}
+
+	bsts.model <- bsts::bsts(y, state.specification = ss, niter = 1000, ping=0)
+	#burn <- SuggestBurn(0.1, bsts.model)
+	p <- predict.bsts(bsts.model, horizon = 7, burn = 100, quantiles = c(.025, .975))
+	
+	predictive_samples <- as.data.frame(t(p$distribution))
+	colnames(predictive_samples) <- paste("sample", 1:ncol(predictive_samples))
+	
+	days_ahead <- 1:nrow(predictive_samples)
+	last_date <- dates[length(dates)]
+	predicted_date <- last_date + days_ahead
+	predictive_samples <- cbind(date = predicted_date, 
+	                            days_ahead = days_ahead, 
+	                            predictive_samples)
+	
+	return(predictive_samples)
+
+}
+
+
+
+
 
 
 
@@ -270,15 +366,14 @@ add_average_model <- function(region_results) {
 	}
 	avg <- pred / length(region_results)
 
-	## add columns with country, model, date and days ahead
+	## add columns with region, model, date and days ahead
 	avg <- cbind(region_results[[1]]$predictive_samples$forecast_run, 
-				 region_results[[1]]$predictive_samples$y_true, 
-				 region_results[[1]]$predictive_samples$country, 
+				 region_results[[1]]$predictive_samples$region, 
 				 region_results[[1]]$predictive_samples$model, 
 				 region_results[[1]]$predictive_samples$predicted_date,
 				 region_results[[1]]$predictive_samples$days_ahead,  	
 				 avg)
-	colnames(avg)[1:6] <- c("forecast_run", "y_true", "country", 
+	colnames(avg)[1:5] <- c("forecast_run", "region", 
 							"model", "predicted_date", "days_ahead")
     							
 
@@ -325,3 +420,8 @@ add_average_model <- function(region_results) {
 	
 
 # }
+
+
+
+
+
