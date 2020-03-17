@@ -11,6 +11,9 @@ par(family = "Serif")
 
 source("R/utilities.R")
 source("R/forecast.R")
+source("R/incidence_prediction.R")
+source("R/scoring.R")
+source("R/plotting.R")
 
 future::plan("multiprocess", workers = future::availableCores() / 2)
 
@@ -34,7 +37,7 @@ analysis <- full_analysis(data)
 saveRDS(analysis, file = "data/analysis/analysis.rds")
 
 full_predictive_samples <- analysis$full_predictive_samples
-
+# 
 all_scores <- scoring(data, analysis$full_predictive_samples)
 saveRDS(all_scores, file = "data/analysis/all_scores.rds")
 
@@ -48,6 +51,28 @@ plot_predictions <- plot_predictions(data, full_predictive_samples, best_model =
 saveRDS(plot_predictions, file = "data/analysis/plot_predictions.rds")
 
 # predict_incidences <- predict_incidences(data, full_predictive_samples)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

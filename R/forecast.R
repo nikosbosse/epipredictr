@@ -129,23 +129,6 @@ analysis_one_region <- function(data, region = NULL, plot = F) {
 }
 
 
-	
-	## make plots with the predictive performance of all models in that region
-	# titles <- names(region_results)
-	# plots <- lapply(seq_along(region_results),
-	# 				FUN = function (i) {
-	# 					plot_pred_vs_true(
-	# 					 y_pred_samples = region_results[[i]]$predictive_samples, 
-	# 					 y_true = region_results[[i]]$y,
-	# 					 forecast_run = region_results[[i]]$forecast_run,
-	# 					 plottitle = titles[i], 
-	# 					 dates = dates
-	# 					)
-	# 		        })
-
-	# forecast_plot_region <- wrap_plots(plots, ncol = 1)
-
-
 
 	# if (isTRUE(include_stan)) {
 	# 	## lin_reg_stan
@@ -166,6 +149,191 @@ analysis_one_region <- function(data, region = NULL, plot = F) {
 	# 								  n_pred = 7, iter = 5000,
 	# 								  max_n_past_obs = 7, vb = FALSE)
 	# }
+
+
+
+#' @title Iteratively fit a model to the data
+#'
+#' @description
+#'
+#' @param incidences Vector of length n with the past incidences used to
+#' fit the model and make predictions.
+#' @param n_pred prediction horizon, i.e. number of days to predict into the
+#' future
+#' @param interval interval between predictions. Maybe delete?
+#' @param max_n_past_obs maximum number of past observations to take into
+#' account
+#'
+#' @return
+#' a data.frame with the data
+#'
+#' @importFrom nCov2019 load_nCov2019
+#'
+#' @examples
+#' NULL
+#' @export
+#' @references
+#' NULL
+
+
+fit_iteratively <- function(data,
+							region,
+							in_between_pred = T,
+							max_n_past_obs = Inf,
+							model = "local",
+							n_samples = 4000,
+							vb = FALSE,
+							fit_type = "bsts_package",
+							length_local_trend = 7,
+							iter = 4000,
+							...) {
+
+	inputdata <- data$inputdata
+	y = inputdata$y[inputdata$region == region]
+	dates = inputdata$date[inputdata$region == region]
+	n_pred = data$n_pred
+	start_period = data$start_period
+	total_n <- length(y)
+
+	## initialize empty lists to hold the results
+	predictive_samples <- list()
+	forecast_run <-list()
+	stanfitobjects <- list()
+
+	current_last_obs <- start_period - 1
+	if (current_last_obs > total_n) {
+		stop("start_period later than length of series")
+	}
+
+	run <- 1
+	for (curr_last_data_point in current_last_obs:total_n) {
+		
+		## determine current indices
+		index <- 1:curr_last_data_point
+		if (length(index) > max_n_past_obs) {
+			current_earliest_obs <- length(index) - max_n_past_obs + 1
+			index <- index[current_earliest_obs:current_last_obs]
+		}
+
+		# get current data and corresponding dates
+		y_curr <- y[index]
+		curr_dates <- dates[index]
+
+		if (fit_type == "stan") {
+			# stanfit <- fit_stan_model(y_curr, model, n_pred = n_pred, vb = vb,
+			# 					      length_local_trend = length_local_trend,
+			# 					      iter = iter)
+			# stanfitobjects[[i]] <- stanfit
+			# predictive_samples[[i]] <- extract_samples(stanfit)
+		} else {
+			predictive_samples[[run]] <- bsts_wrapper(y = y_curr,
+													dates = curr_dates,
+													model = model,
+													num_pred  = n_pred)
+
+		}
+		forecast_run[[run]] <- rep(run, n_pred)
+
+		run <- run + 1
+	}
+
+    predictive_samples <- do.call("rbind", predictive_samples)
+
+    forecast_run <- do.call("c", forecast_run)
+
+    predictive_samples <- cbind(forecast_run = forecast_run, 
+    							region = region, 
+								model = model, 
+								type = "predicted",
+								predictive_samples)
+
+	return(list(predictive_samples = predictive_samples,
+		        forecast_run = forecast_run,
+		        stanfitobjects = stanfitobjects,
+		    	y = y))
+
+}
+
+
+
+#' @title Fit model
+#'
+#' @description
+#' Wrapper around different lower level fit functions
+#' @param y Vector of length n with the true values
+#' fit the model and make predictions.
+#' @param model Missing
+#'
+#' @return
+#' Missing
+#' @examples
+#' NULL
+#' @export
+
+predict_with_model <- function(y, model, num_pred, stan = F) {
+
+	if (isTRUE(stan)) {
+
+	} else {
+		return(bsts_wrapper(y, model, num_pred = num_pred))
+	}
+}
+
+
+
+
+#' @title Wrapper around the functions from the bsts package
+#'
+#' @description
+#' Missing.
+#' Also Todo: handling for only one item
+#' @param dates The dates for the data that is uses for the prediction.
+#' We need the last date in order to specify the date for which the predictions
+#' are made
+#'
+#' @return
+#' Missing
+#' @examples
+#' NULL
+#' @export
+
+bsts_wrapper <- function(y, model,
+						 num_pred = NULL,
+						 dates = dates,
+						 n_iter = 2000) {
+	if (model == "semilocal") {
+		ss <- AddSemilocalLinearTrend(list(), y)
+	} else if (model == "local"){
+		ss <- AddLocalLinearTrend(list(), y)
+	} else if (model == "local_student"){
+		ss <- AddStudentLocalLinearTrend(list(), y)
+	} else if (model == "ar1"){
+		ss <- AddAr(list(), y, lags = 1)
+	} else if (model == "ar2"){
+		ss <- AddAr(list(), y, lags = 2)
+	}
+
+	bsts.model <- bsts::bsts(y, state.specification = ss, niter = 1000, ping=0)
+	#burn <- SuggestBurn(0.1, bsts.model)
+	p <- predict.bsts(bsts.model, horizon = 7, burn = 100, quantiles = c(.025, .975))
+	
+	predictive_samples <- as.data.frame(t(p$distribution))
+	colnames(predictive_samples) <- paste("sample", 1:ncol(predictive_samples))
+	
+	days_ahead <- 1:nrow(predictive_samples)
+	last_date <- dates[length(dates)]
+	predicted_date <- last_date + days_ahead
+	predictive_samples <- cbind(date = predicted_date, 
+	                            days_ahead = days_ahead, 
+	                            predictive_samples)
+	
+	return(predictive_samples)
+
+}
+
+
+
+
 
 
 
@@ -254,558 +422,6 @@ add_average_model <- function(region_results) {
 # }
 
 
-
-#' @title Make incidence predictions
-#'
-#' @description
-#' Missing.
-#' Also Todo: handling for only one item
-#' @param y
-#'
-#' @return
-#' Missing
-#' @examples
-#' NULL
-#' @export
-
-predict_incidences <- function (data, full_predictive_samples) {
-
-
-
-	regions <- unique(data$inputdata$region)
-
-	inc_pred <- lapply(seq_along(regions), 
-					   function(i) {
-					   		cat("predict incidences ", 
-							as.character(i), " (", regions[i],
-							") ",  
-							"of ", as.character(length(regions)), 
-							"\n", sep = "")
-					   		predict_incidences_one_region(full_predictive_samples, regions[i])
-					   })
-	return(do.call(rbind, inc_pred))
-
-}
-
-
-
-predict_incidences_one_region <- function(full_predictive_samples, region) {
-
-	region = "austria"
-	pred <- full_predictive_samples[full_predictive_samples$region == region, ]
-	max_days_ahead <- max(full_predictive_samples$days_ahead)
-	predicted_incidences <- list()
-	
-	for (days_ahead in 1:max_days_ahead) {
-		pred_x_ahead <- pred[pred$days_ahead == days_ahead, ]
-		dates <- unique(pred_x_ahead$date)
-		cat("step", as.character(days_ahead), "of", as.character(max_days_ahead), "\n")
-		
-
-		inc <- lapply(seq_along(dates), 
-					FUN = function(i) {
-						# cat(as.character(i), "of", as.character(length(dates)))
-						## select current predictive R0 samples 
-						curr_r_pred <- pred_x_ahead[pred_x_ahead$date == dates[i], ]
-						select_cols <- grepl("sample", colnames(curr_r_pred))	
-
-						## infectiousness from observed data
-						inf_data <- infectiousness_from_true_data(days_ahead = days_ahead, data, 
-						region, date_of_prediction = dates[i])
-						
-						## infectiousness from predicted data
-						last_date_of_observed_data <- as.Date(dates[i]) - days_ahead
-						prev_pred_dates <- last_date_of_observed_data + 1:days_ahead
-						prev_pred_dates <- prev_pred_dates[-length(prev_pred_dates)]
-
-						if (length(prev_pred_dates) == 0) {
-							infectiousness <- inf_data
-						} else {
-							inf <- list()
-							for (curr_prev_date in prev_pred_dates) {
-								
-								curr_prev_date <- as.Date(curr_prev_date)
-								diff_to_curr <- as.numeric(as.Date(dates[i]) - curr_prev_date)
-								predictions_to_select <- days_ahead - diff_to_curr
-
-								prev_pred_inc <- predicted_incidences[[predictions_to_select]]
-								prev_pred_inc <- prev_pred_inc[prev_pred_inc$date == curr_prev_date, ]
-
-								inf[[predictions_to_select]] <- prev_pred_inc[, select_cols] * weight_case_x_days_ago(diff_to_curr)
-							}
-							infectiousness <- Reduce("+", inf) + inf_data
-						}
-
-						pred_inc <- cbind(curr_r_pred[, !select_cols], 
-										  curr_r_pred[, select_cols] * infectiousness)
-						return(pred_inc)
-					})
-
-		predicted_incidences[[days_ahead]] <- do.call(rbind, inc)
-	}
-
-	return(do.call(rbind, predicted_incidences))
-
-}
-
-
-
-
-
-infectiousness_from_true_data <- function(days_ahead, 
-										  data, region, date_of_prediction,
-										  mean_si = NULL, sd_si = NULL) {
-
-		## a one day ahead forecast means that the last data point is one
-		## day away from the current date
-		last_date_of_observed_data <- as.Date(date_of_prediction) - (days_ahead)	
-
-		select_obs <- incidences$region == region & incidences$date <= last_date_of_observed_data
-		y <- incidences$y[select_obs]
-		num_obs <- length(y)
-		dates <- incidences$date[incidences$region == region]
-
-
-
-
-		w <- sapply(num_obs:1, weight_case_x_days_ago)
-		return (sum(w * y))
-}
-
-
-
-
-weight_case_x_days_ago <- function(num_days_ago, 
-											mean_si = NULL, 
-											sd_si = NULL) {
-	alpha_gamma = 2.706556
-	beta_gamma = 0.1768991
-	return(pgamma(num_days_ago + 0.5, alpha_gamma, beta_gamma) -
-     pgamma(num_days_ago - 0.5, alpha_gamma, beta_gamma))
-}
-
-
-
-
-
-
-
-#' @title Do the scoring
-#'
-#' @description
-#' Missing.
-#' Also Todo: handling for only one item
-#' @param y
-#'
-#' @return
-#' Missing
-#' @examples
-#' NULL
-#' @export
-
-
-scoring <- function(data, full_predictive_samples) {
-
-	inputdata <- data$inputdata
-	models <- data$models
-	regions <- as.character(unique(inputdata$region))
-
-	score_model_in_region <- function(data, full_predictive_samples, region, model) {
-		inputdata <- data$inputdata
-
-		# select observations and predictions
-		index <- full_predictive_samples$model == model & full_predictive_samples$region == region
-		observations <- inputdata[inputdata$region == region, ] 
-		predictions <- full_predictive_samples[index, ]
-
-		df <- merge(observations, predictions)
-		pred <- df[, grepl("sample", colnames(df))]
-
-		dss <- scoringRules::dss_sample(y = df$y, dat = as.matrix(pred))
-		crps <- scoringRules::crps_sample(y = df$y, dat = as.matrix(pred))
-		pit <- pit_cont(y = df$y, as.matrix(pred))
-		sharpness <- apply(pred, MARGIN = 1, mad)
-		bias <- 1 - pit
-
-
-		scores <- data.frame(date = df$date, 
-				   model = model, 
-				   region = region,
-				   days_ahead = df$days_ahead, 
-				   crps = crps, 
-				   dss = dss, 
-				   pit = pit, 
-				   sharpness = sharpness,
-				   bias = bias)
-
-		return(scores)
-	}
-
-
-	all_scores <- list()
-	for (region in regions) {
-		tmp <- furrr::future_map(seq_along(models), 
-					  .f = function(i) {
-					  	score_model_in_region(data, 
-					  						  full_predictive_samples, 
-					  						  region, 
-					  						  models[i])
-					  }, .progress = TRUE)
-		scores_one_region <- do.call(rbind, tmp)
-		all_scores[[region]] <- scores_one_region
-	}	
-	all_scores <- do.call(rbind, all_scores)
-
-	return(all_scores)
-}
-
-
-
-
-#' @title aggregate scores
-#'
-#' @description
-#' Missing.
-#' Also Todo: handling for only one item
-#' @param y
-#'
-#' @return
-#' Missing
-#' @examples
-#' NULL
-#' @export
-
-
-aggregate_scores <- function(all_scores) {
-
-	## aggregate scores in one region over all predictions made by 
-	## that model for given days ahead
-	n_pred <- max(all_scores$days_ahead)
-	overall_region_scores <- aggregate(. ~ model + days_ahead + region,
-									   all_scores, 
-									   mean)
-
-	scores_model_in_region <- subset(overall_region_scores, select = -c(date))
-	
-
-	## aggregate to find the model that performs best in every region 
-	## no matter the time horizon
-	mean_model_scores_region <- aggregate(. ~ model + region, 
-										  scores_model_in_region, mean)
-	mean_model_scores_region <- subset(mean_model_scores_region, 
-									   select = -days_ahead)
-
-
-	## aggregate to find the model that performs best for a given time horizon 
-	## no matter the region
-	mean_model_scores_horizon <- aggregate(. ~ model + days_ahead, 
-										  scores_model_in_region, mean)
-	mean_model_scores_horizon <- subset(mean_model_scores_horizon, 
-									   select = -days_ahead)
-
-	## aggregate the scores (that were already averaged over all predictions
-	## made by one model in one country) over all the regions to get the 
-	## model that performs best for given days ahead
-	model_scores <- list()
-	for (i in 1:n_pred) {
-		index <- scores_model_in_region$days_ahead == i
-		tmp <- aggregate(. ~ model, 
-								  scores_model_in_region[index, ], 
-								  mean)
-		tmp <- subset(tmp, select = -c(region))
-
-		model_scores[[i]] <- tmp
-	}
-	model_scores <- do.call(rbind, model_scores)
-
-
-	## aggregate to find the model that performs best overall no 
-	## matter the time horizon
-	mean_model_scores <- aggregate(. ~ model, model_scores, mean)
-	mean_model_scores <- subset(mean_model_scores, select = -days_ahead)
-
-	return(list(scores_model_in_region = scores_model_in_region,
-				mean_model_scores_region = mean_model_scores_region,
-				mean_model_scores_region = mean_model_scores_region,
-				model_scores = model_scores, 
-				mean_model_scores = mean_model_scores))
-}
-
-
-
-
-#' @title Do the plotting for scores
-#'
-#' @description
-#' Missing.
-#' Also Todo: handling for only one item
-#' @param y
-#'
-#' @return
-#' Missing
-#' @examples
-#' NULL
-#' @export
-
-plot_scoring <- function(data, aggregate_scores, all_scores) {
-
-	model_scores <- aggregate_scores$model_scores
-	mean_model_scores_region <- aggregate_scores$mean_model_scores_region
-
-	scores_model_in_region <- aggregate_scores$scores_model_in_region
-
-	model_scores_plot <- ggplot(data = model_scores,
-		   	aes(y = crps, x = model, color = model)) +
-	  		geom_boxplot() +
-	  		theme(text = element_text(family = 'Sans Serif')) +
-	  		ggtitle("Aggregated performance for different horizons")
-
-	 mean_scores_plot <- ggplot(data = mean_model_scores_region,
-		   	aes(y = crps, x = model, group = model, color = model)) +
-	  		geom_boxplot() +
-	  		theme(text = element_text(family = 'Sans Serif')) +
-	  		ggtitle("Performance averaged over days ahead and regions")
-
-
-	score_days_ahead <- ggplot(data = scores_model_in_region,
-		   	aes(y = crps, x = model, 
-		   		group = model, color = model)) +
-	  		geom_boxplot() +
-	  		facet_wrap(~ days_ahead) +
-	  		theme(text = element_text(family = 'Sans Serif')) +
-	  		ggtitle("Performance for different horizons across all countries")
-
-	score_days_ahead2 <-  ggplot(data = scores_model_in_region,
-		   	aes(y = crps, x = days_ahead, 
-		   		group = days_ahead, color = model)) +
-	  		geom_boxplot() +
-	  		facet_wrap(~ model) +
-	  		theme(text = element_text(family = 'Sans Serif')) +
-	  		ggtitle("Performance for different horizons across all countries")
-
-
-	score_days_ahead3 <- ggplot(data = scores_model_in_region,
-		   	aes(y = crps, x = days_ahead, group = days_ahead, color = model, fill = model)) +
-	  		geom_violin(alpha = 0.4) +
-	  		facet_wrap(~ model) +
-	  		theme(text = element_text(family = 'Sans Serif'), legend.position = "bottom") +
-	  		ggtitle("Performance for different horizons across all countries")
-
-
-	 return(list(model_scores_plot = model_scores_plot, 
-	 			 score_days_ahead = score_days_ahead, 
-				 score_days_ahead2 = score_days_ahead2, 
-				 mean_scores_plot = mean_scores_plot))
-}
-
-
-
-
-plot_predictions <- function(data, full_predictive_samples, best_model) {
-
-	make_plot_dataframe <- function(data, full_predictive_samples) {
-		inputdata <- data$inputdata
-
-		## make df for observations
-		obs <- cbind(inputdata, 
-					 type = "observed", 
-					 days_ahead = 0,
-					 model = NA,
-					 ci2.5 = NA, 
-					 ci25 = NA, 
-				     ci75 = NA, 
-				     ci97.5 = NA, 
-				     forecast_run = NA)
-
-		## make df for predictions
-		select_cols <- grepl("sample", colnames(full_predictive_samples))
-		y_pred_samples <- full_predictive_samples[, select_cols]	
-
-		pred_mean <- rowMeans(y_pred_samples)
-		pred_median <- apply(y_pred_samples, median, MARGIN = 1)
-		pred_quantiles <- t(apply(y_pred_samples,
-									MARGIN = 1,
-									FUN = quantile,
-									probs = c(0.025, 0.25, 0.75, 0.975),
-								    na.rm = TRUE))
-
-		pred <- data.frame(date = full_predictive_samples$date,
-						   days_ahead = full_predictive_samples$days_ahead,
-						   model = full_predictive_samples$model,
-					       y = pred_median, 
-					       region = full_predictive_samples$region,
-					       type = "predicted", 
-					       ci2.5 = pred_quantiles[,1], 
-					       ci25 = pred_quantiles[,2], 
-					       ci75 = pred_quantiles[,3], 
-					       ci97.5 = pred_quantiles[,4], 
-					       forecast_run = full_predictive_samples$forecast_run)
-
-		return(rbind(obs, pred))
-	}
-
-	plot_df <- make_plot_dataframe(data, full_predictive_samples)
-	
-
-	## make predictions for the best model =======================
-	plot_predictions_best_model <- function(model, region, plot_df) {
-		#select appropriate data: region, model, and last forecast_run
-		index <- plot_df$region == region
-		dfcurr <- plot_df[index, ]
-		index <- is.na(dfcurr$forecast_run) | dfcurr$forecast_run == max(dfcurr$forecast_run, na.rm = T) 
-		index <- index & (is.na(dfcurr$model) | dfcurr$model == model )
-		dfcurr <- dfcurr[index, ]
-		df_obs <- dfcurr[dfcurr$type == "observed", ]
-		df_pred <- dfcurr[dfcurr$type == "predicted", ]
-
-		out <- ggplot(data = df_pred, aes(x = date, group = type, color = type)) + 
-				geom_ribbon(aes(ymin =ci2.5, ymax = ci97.5), alpha = 0.3, fill = "blue") +
-				geom_ribbon(aes(ymin = ci25, ymax = ci75), alpha = 0.7, fill = "blue") +
-			geom_line(data = df_obs, aes(y = y, group = type), color = "red") +
-			geom_point(data = df_obs, aes(y = y), size=1) +
-			theme_cowplot() +
-			theme(legend.position="bottom", text = element_text(family = 'Sans Serif')) 
-
-		return(out)
-	}
-
-	regions <- unique(data$inputdata$region)
-	pred_best_model <- lapply(seq_along(regions), 
-							  FUN = function(i) {
-							  	plot_predictions_best_model(best_model, regions[i], plot_df)	 
-							  })
-
-	names(pred_best_model) <- paste("prediction", regions, sep = "")
-
-	## plot accuracy for model x in region y for different days ahead 	  
-	plot_forecast_vs_true <- function(region, model, plot_df) {
-		
-		index <- plot_df$region == region & (is.na(plot_df$model) | plot_df$model == model)
-		dfcurr <- plot_df[index, ]
-		df_obs <- dfcurr[dfcurr$type == "observed", ]
-		df_obs <- subset(df_obs, select = -days_ahead)
-		df_pred <- dfcurr[dfcurr$type == "predicted", ]
-		df_pred <- df_pred[df_pred$date <= max(df_obs$date), ]
-
-		out <- ggplot(data = df_pred, aes(x = date)) + 
-				geom_line(data = df_obs, aes(y = y), color = "blue") +
-				geom_ribbon(aes(ymin =ci2.5, ymax = ci97.5, group = days_ahead), alpha = 0.2) +
-				geom_ribbon(aes(ymin = ci25, ymax = ci75, group = days_ahead), alpha = 0.5) +
-				facet_wrap(~ days_ahead) +
-				coord_cartesian(ylim = c(0, NA)) +
-		  		theme(text = element_text(family = 'Sans Serif')) 		
-		return(out)
-	}
-
-	
-	plot_pred_vs_true_one_region <- function(data, region, plot_df) {
-		models <- data$models
-
-		out <- lapply(seq_along(models), 
-					  FUN = function (i) {
-					  	plot_forecast_vs_true(region, models[i], plot_df)
-					  })
-		names(out) <- models
-		return(out)
-	}
-
-
-
-	all_plot_pred_vs_true <- function(data, plot_df) {
-		
-		regions <- unique(data$inputdata$region)
-		out <- lapply(seq_along(regions), 
-					  FUN = function (i) {
-					  	plot_pred_vs_true_one_region(data, regions[i], plot_df)
-					  })
-		names(out) <- paste("pred_vs_true", regions, sep = "")
-		return(out)
-	}
-	 
-	all_plots_pred_vs_true <- all_plot_pred_vs_true(data, plot_df)
-
-
-	return(list(predictions_best = pred_best_model, 
-				all_plot_pred_vs_true = all_plots_pred_vs_true))
-
-}
-
-
-
-
-
-
-#
-#
-# predictions = list(dat1 = replicate(5000, rpois(n = 100, lambda = 1:100)),
-#                    dat2 = replicate(5000, rpois(n = 100, lambda = 1:100)))
-#
-#
-# call = eval_forecasts(y, predictions)
-#
-#
-# eval_forecasts_prob_int(true_values = y, predictions = predictions)
-#
-
-
-
-
-
-
-
-
-
-
-
-
-	# if(isTRUE(plot)) {
-	# 	y <- inputdata[inputdata$region == country, 
-	# 			   colnames(inputdata) == "median"]
-	# 	compare_bsts_models(y)
-	# }
-
-	
-	## make plots with the predictive performance of all models in that region
-	# titles <- names(region_results)
-	# plots <- lapply(seq_along(region_results),
-	# 				FUN = function (i) {
-	# 					plot_pred_vs_true(
-	# 					 y_pred_samples = region_results[[i]]$predictive_samples, 
-	# 					 y_true = region_results[[i]]$y,
-	# 					 forecast_run = region_results[[i]]$forecast_run,
-	# 					 plottitle = titles[i], 
-	# 					 dates = dates
-	# 					)
-	# 		        })
-
-
-
-
-
-
-	## find best model and make separate predictin plots ============ #
-	# best <- as.character(table_mean[1, colnames(table_mean) == "model"])
-
-	# predictions_best <- list()
-	# for (country in countries) {
-
-	# 	predictive_samples <- all_region_results[[country]]$region_results[[best]]$predictive_samples
-	# 	y <- all_region_results[[country]]$region_results[[best]]$y
-
-	# 	forecast_run <- all_region_results[[country]]$region_results[[best]]$forecast_run
-
-	# 	predictive_samples[!is.na(y), ] <- NA
-
-	# 	t <- paste(country, best, sep = "_")
-	# 	p <- plot_pred_vs_true(y_true = y,
-	# 						   y_pred_samples = predictive_samples,
-	# 						   forecast_run = forecast_run, vlines = F,
-	# 					  	   plottitle = t)
-	# 	predictions_best[[country]] <- p
-	# }
-	## ========================================================== #
-
-	## make case predictions with best model ============ #
 
 
 
