@@ -67,15 +67,30 @@ plot_scoring <- function(data, aggregate_scores, all_scores) {
 }
 
 
+plot_predictions <- function(data, full_predictive_samples, best_model. 
+							 incidences = NULL, type = "R",
+							 predicted_incidences == NULL) {
 
+	make_plot_dataframe <- function(data, full_predictive_samples, incidences, 
+									type) {
 
-plot_predictions <- function(data, full_predictive_samples, best_model) {
+		if (type == "R") {
+			y_values <- data$inputdata	
+		} else {
+			## select appropriate dates
+			regions <- unique(incidences$region)
+			select_dates <- sapply(regions, 
+								   function(region) {
+								   	 pred_dates <- predicted_incidences$date[predicted_incidences$region == region]
+								   	 incidences$region == region & incidences$date %in% 
+								   })
 
-	make_plot_dataframe <- function(data, full_predictive_samples) {
-		inputdata <- data$inputdata
+			dim(full_predictive_samples)
+		}
+ 		
 
 		## make df for observations
-		obs <- cbind(inputdata, 
+		obs <- cbind(y_values, 
 					 type = "observed", 
 					 days_ahead = 0,
 					 model = NA,

@@ -21,7 +21,7 @@ predict_incidences <- function (data, full_predictive_samples) {
 
 	regions <- unique(data$inputdata$region)
 
-	inc_pred <- lapply(seq_along(regions), 
+	inc_pred <- furrr::future_map(seq_along(regions), 
 					   function(i) {
 					   		cat("predict incidences ", 
 							as.character(i), " (", regions[i],
@@ -29,7 +29,7 @@ predict_incidences <- function (data, full_predictive_samples) {
 							"of ", as.character(length(regions)), 
 							"\n", sep = "")
 					   		predict_incidences_one_region(full_predictive_samples, regions[i])
-					   })
+					   }, .progress = T)
 	return(do.call(rbind, inc_pred))
 
 }
@@ -95,8 +95,7 @@ predict_incidences_one_region <- function(full_predictive_samples, region) {
 
 }
 
-
-
+b <- do.call(rbind, predicted_incidences)
 
 
 infectiousness_from_true_data <- function(days_ahead, 
@@ -127,8 +126,20 @@ weight_case_x_days_ago <- function(num_days_ago,
 											sd_si = NULL) {
 	alpha_gamma = 2.706556
 	beta_gamma = 0.1768991
-	return(pgamma(num_days_ago + 0.5, alpha_gamma, beta_gamma) -
-     pgamma(num_days_ago - 0.5, alpha_gamma, beta_gamma))
+
+
+	# return(pgamma(num_days_ago + 0.5, alpha_gamma, beta_gamma) -
+ #     pgamma(num_days_ago - 0.5, alpha_gamma, beta_gamma))
+
+	mean_si <- 4.7
+	sd_si <- 2.9
+
+	mu_log <- log(mean_si) - 1/2 * log((sd_si / mean_si)^2 + 1)
+	sd_log <- sqrt(log((sd_si/mean_si)^2 + 1) )
+
+	return(plnorm(num_days_ago + 0.5, alpha_gamma, beta_gamma) -
+      	   plnorm(num_days_ago - 0.5, alpha_gamma, beta_gamma))
+
 }
 
 

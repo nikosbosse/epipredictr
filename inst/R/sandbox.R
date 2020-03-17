@@ -50,15 +50,27 @@ saveRDS(plot_scoring, file = "data/analysis/plot_scoring.rds")
 plot_predictions <- plot_predictions(data, full_predictive_samples, best_model = "semilocal")
 saveRDS(plot_predictions, file = "data/analysis/plot_predictions.rds")
 
-# predict_incidences <- predict_incidences(data, full_predictive_samples)
 
 
 
 
+## do everything for incidences as well
+predicted_incidences <- predict_incidences(data, full_predictive_samples)
 
+saveRDS(predicted_incidences, file = "data/analysis/predicted_incidences.rds")
 
+all_scored_incidences <- scoring(data, analysis$full_predictive_samples, 
+								 incidences = incidences, scoringtype = "Inc", 
+								 predicted_incidences = predicted_incidences)
+saveRDS(all_scored_incidences, file = "data/analysis/all_scored_incidences.rds")
 
+aggregated_incidence_scores <- aggregate_scores(all_scored_incidences)
+saveRDS(aggregated_incidence_scores, file = "data/analysis/aggregated_incidence_scores.rds")
 
+plot_predictions_incidences <- plot_predictions(data, full_predictive_samples, 
+									 best_model = "semilocal", incidences, 
+									 type = "inc")
+saveRDS(plot_predictions, file = "data/analysis/plot_predictions.rds")
 
 
 

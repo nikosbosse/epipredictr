@@ -14,19 +14,32 @@
 #' @export
 
 
-scoring <- function(data, full_predictive_samples) {
+scoring <- function(data, full_predictive_samples, incidences = NULL, scoringtype = "R") {
 
 	inputdata <- data$inputdata
 	models <- data$models
 	regions <- as.character(unique(inputdata$region))
 
-	score_model_in_region <- function(data, full_predictive_samples, region, model) {
+	score_model_in_region <- function(data, full_predictive_samples, 
+								      region, model, incidences = NULL, 
+								      predicted_incidences = NULL,
+								      scoringtype) {
+
 		inputdata <- data$inputdata
 
 		# select observations and predictions
-		index <- full_predictive_samples$model == model & full_predictive_samples$region == region
-		observations <- inputdata[inputdata$region == region, ] 
-		predictions <- full_predictive_samples[index, ]
+		if (scoringtype == "R") {
+			index <- full_predictive_samples$model == model & full_predictive_samples$region == region
+			predictions <- full_predictive_samples[index, ]
+			observations <- inputdata[inputdata$region == region, ] 
+		} else {
+			index <- predicted_incidences$model == model & predicted_incidences$region == region
+			predictions <- predicted_incidences[index, ]
+
+			observations <- incidences[incidences$region == region, ]
+			select_dates <- observations$date %in% unique(predictions$date)
+			observations <- observations[select_dates, ]	
+		}
 
 		df <- merge(observations, predictions)
 		pred <- df[, grepl("sample", colnames(df))]
@@ -58,7 +71,9 @@ scoring <- function(data, full_predictive_samples) {
 					  .f = function(i) {
 					  	score_model_in_region(data, 
 					  						  full_predictive_samples, 
-					  						  region, 
+					  						  region,
+					  						  incidences = incidences, 
+					  						  scoringtype = scoringtype, 
 					  						  models[i])
 					  }, .progress = TRUE)
 		scores_one_region <- do.call(rbind, tmp)

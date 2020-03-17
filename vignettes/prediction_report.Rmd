@@ -48,23 +48,28 @@ library(bsts)
 par(family = "Serif")
 source("../R/utilities.R")
 source("../R/forecast.R")
+source("../R/incidence_prediction.R")
+source("../R/scoring.R")
+source("../R/plotting.R")
+
+
+
 ```
 
 
 ```{r load-data, include=FALSE}
 
 analysis <- readRDS("../data/analysis/analysis.rds")
-full_predictive_samples <- analysis$full_predictive_samples
-
 all_scores <- readRDS("../data/analysis/all_scores.rds")
-
 aggregate_scores <- readRDS("../data/analysis/aggregate_scores.rds")
-
-plot_scoring <-- readRDS("../data/analysis/plot_scoring.rds")
-
+plot_scoring <- readRDS("../data/analysis/plot_scoring.rds")
 plot_predictions <- readRDS("../data/analysis/plot_predictions.rds")
+plot_predictions$all_plot_pred_vs_true$pred_vs_trueaustralia
+plot_predictions$all_plot_pred_vs_true$pred_vs_trueitaly$local_student
 
+plot_scoring$score_days_ahead2
 
+plot_scoring$model_scores_plot
 
 ```
 
