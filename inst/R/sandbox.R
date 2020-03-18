@@ -21,7 +21,6 @@ future::plan("multiprocess", workers = future::availableCores() / 2)
 #
 # ======================================================== #
 
-
 models <- c("local", "semilocal", "local_student", "ar1", "ar2")
 inputdata <- load_all_timeseries()
 incidences <- load_all_timeseries(ts_type = "incidences")
@@ -33,10 +32,26 @@ data <- list(inputdata = inputdata,
              n_pred = 14,
              start_period = 4)
 
+analysis <- readRDS("data/analysis/analysis.rds")
+all_scores <- readRDS("data/analysis/all_scores.rds")
+full_predictive_samples <- analysis$full_predictive_samples
+region = "italy"
+model = "semilocal"
+aggregate_scores <- readRDS("data/analysis/aggregate_scores.rds")
+plot_scoring <- readRDS("data/analysis/plot_scoring.rds")
+plot_predictions <- readRDS("data/analysis/plot_predictions.rds")
+predicted_incidences <- readRDS("data/analysis/predicted_incidences.rds")
+
+
+
+
+
+# ====== run analysis again ====== #
+
+
 analysis <- full_analysis(data)
 saveRDS(analysis, file = "data/analysis/analysis.rds")
 
-full_predictive_samples <- analysis$full_predictive_samples
 # 
 all_scores <- scoring(data, analysis$full_predictive_samples)
 saveRDS(all_scores, file = "data/analysis/all_scores.rds")
@@ -47,10 +62,30 @@ saveRDS(aggregate_scores, file = "data/analysis/aggregate_scores.rds")
 plot_scoring <- plot_scoring(data, aggregate_scores, all_scores)
 saveRDS(plot_scoring, file = "data/analysis/plot_scoring.rds")
 
-plot_predictions <- plot_predictions(data, full_predictive_samples, best_model = "semilocal")
+plot_predictions <- plot_predictions(data, 
+									 analysis$full_predictive_samples, 
+									 best_model = "semilocal")
 saveRDS(plot_predictions, file = "data/analysis/plot_predictions.rds")
 
-# predict_incidences <- predict_incidences(data, full_predictive_samples)
+
+## do everything for incidences as well
+predicted_incidences <- predict_incidences(data, 
+										   analysis$full_predictive_samples)
+saveRDS(predicted_incidences, file = "data/analysis/predicted_incidences.rds")
+
+
+all_scored_incidences <- scoring(data, analysis$full_predictive_samples, 
+								 incidences = incidences, scoringtype = "Inc", 
+								 predicted_incidences = predicted_incidences)
+saveRDS(all_scored_incidences, file = "data/analysis/all_scored_incidences.rds")
+
+aggregated_incidence_scores <- aggregate_scores(all_scored_incidences)
+saveRDS(aggregated_incidence_scores, file = "data/analysis/aggregated_incidence_scores.rds")
+
+plot_predictions_incidences <- plot_predictions(data, full_predictive_samples, 
+									 best_model = "semilocal", incidences = incidences, 
+									 type = "inc", predicted_incidences = predicted_incidences)
+saveRDS(plot_predictions, file = "data/analysis/plot_predictions.rds")
 
 
 
@@ -61,13 +96,19 @@ saveRDS(plot_predictions, file = "data/analysis/plot_predictions.rds")
 
 
 
+# 						v <- sapply(seq_along(dates), 
+# 								FUN = function (i) {
+# 									infectiousness_from_true_data(1, incidences, data, region, dates[i])
+# 								})
+						
+# rowMeans((full_predictive_samples[full_predictive_samples$region == region & full_predictive_samples$days_ahead ==1, 7:700]))
 
+# any(is.na(pred_inc))
+# any(is.na(pmax(curr_r_pred[, select_cols] * infectiousness, 0)))
 
-
-
-
-
-
+# which(is.na(pred_inc), arr.ind = T)
+# dim(pred_inc)
+# pred_inc
 
 
 

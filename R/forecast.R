@@ -130,26 +130,6 @@ analysis_one_region <- function(data, region = NULL, plot = F) {
 
 
 
-	# if (isTRUE(include_stan)) {
-	# 	## lin_reg_stan
-	# 	model_lin_reg <- models[[1]]
-	# 	res$lin_reg_stan <- fit_iteratively(incidences = y, model = model_lin_reg,
-	# 						   n_pred = 7, iter = 5000,
-	#  					       max_n_past_obs = 7, vb = FALSE)
-
-	# 	model_bsts <- models[[2]]
-	# 	res$bsts_stan <- fit_iteratively(incidences = y,
-	# 							model = model_bsts, n_pred = 7, iter = 5000,
-	# 							prior_var_phi = 0.8, mean_phi = 1,
-	# 							max_n_past_obs = Inf, vb = FALSE)
-
-	# 	model_bsts_local <- models[[3]]
-	# 	res$bsts_local_stan <- fit_iteratively(incidences = y,
-	# 								  model = model_bsts_local,
-	# 								  n_pred = 7, iter = 5000,
-	# 								  max_n_past_obs = 7, vb = FALSE)
-	# }
-
 
 
 #' @title Iteratively fit a model to the data
@@ -315,7 +295,7 @@ bsts_wrapper <- function(y, model,
 
 	bsts.model <- bsts::bsts(y, state.specification = ss, niter = 1000, ping=0)
 	#burn <- SuggestBurn(0.1, bsts.model)
-	p <- predict.bsts(bsts.model, horizon = 7, burn = 100, quantiles = c(.025, .975))
+	p <- predict.bsts(bsts.model, horizon = num_pred, burn = 100, quantiles = c(.025, .975))
 	
 	predictive_samples <- as.data.frame(t(p$distribution))
 	colnames(predictive_samples) <- paste("sample", 1:ncol(predictive_samples))
@@ -330,6 +310,8 @@ bsts_wrapper <- function(y, model,
 	return(predictive_samples)
 
 }
+
+
 
 
 
