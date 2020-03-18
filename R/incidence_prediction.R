@@ -40,17 +40,6 @@ predict_incidences <- function (data, full_predictive_samples) {
 
 
 
-
-# d <- predict_incidences_one_region(full_predictive_samples, "south-korea")
-
-# d[, 5:8]
-
-# d2 <- d[d$days_ahead == 10, ]
-
-# ggplot(d2, aes(x = date, y = .data[['sample 2']], group = model, color = model)) + geom_line() + 
-# theme(text = element_text(family = 'Sans Serif'))
-
-
 predict_incidences_one_region <- function(full_predictive_samples, region) {
 
 	pred <- full_predictive_samples[full_predictive_samples$region == region, ]

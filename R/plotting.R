@@ -113,9 +113,9 @@ plot_scoring <- function(data, aggregate_scores, all_scores) {
     tmpdata <- all_scores[all_scores$region == region, ]
 
     metrics_by_days_ahead <- lapply(seq_along(metrics),
+                                    function (i) {
                                     title <- paste("Performance for different horizons in ",
                                                    region)
-                                    function (i) {
                                       ggplot(data = tmpdata,
                                              aes(
                                                y = .data[[metrics[i]]],
@@ -331,6 +331,8 @@ plot_predictions <- function(data, full_predictive_samples, best_model,
 
   names(pred_best_model) <- paste("prediction", regions, sep = "")
 
+  any(is.na(predicted_incidences[predicted_incidences$region == region & predicted_incidences$days_ahead ==1, 7:800]))
+
   ## plot accuracy for model x in region y for different days ahead
   plot_forecast_vs_true <- function(region, model, plot_df) {
 
@@ -341,13 +343,13 @@ plot_predictions <- function(data, full_predictive_samples, best_model,
     df_pred <- dfcurr[dfcurr$type == "predicted", ]
     df_pred <- df_pred[df_pred$date <= max(df_obs$date), ]
 
-    out <- ggplot(data = df_pred, aes(x = date)) +
+    (out <- ggplot(data = df_pred, aes(x = date)) +
       geom_line(data = df_obs, aes(y = y), color = "blue") +
       geom_ribbon(aes(ymin =ci2.5, ymax = ci97.5, group = days_ahead), alpha = 0.2) +
       geom_ribbon(aes(ymin = ci25, ymax = ci75, group = days_ahead), alpha = 0.5) +
       facet_wrap(~ days_ahead) +
       coord_cartesian(ylim = c(0, NA)) +
-      theme(text = element_text(family = 'Sans Serif'))
+      theme(text = element_text(family = 'Sans Serif')))
     return(out)
   }
 

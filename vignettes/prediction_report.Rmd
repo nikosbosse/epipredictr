@@ -59,32 +59,24 @@ source("../R/plotting.R")
 
 ```{r load-data, include=FALSE}
 
-analysis <- readRDS("../data/analysis/analysis.rds")
-all_scores <- readRDS("../data/analysis/all_scores.rds")
-aggregate_scores <- readRDS("../data/analysis/aggregate_scores.rds")
-plot_scoring <- readRDS("../data/analysis/plot_scoring.rds")
-plot_predictions <- readRDS("../data/analysis/plot_predictions.rds")
-predicted_incidences <- readRDS("../data/analysis/predicted_incidences.rds")
-
-
-plot_predictions$all_plot_pred_vs_true$pred_vs_trueaustralia
-plot_predictions$all_plot_pred_vs_true$pred_vs_trueitaly$local_student
-
-plot_scoring$score_days_ahead2
-
-plot_scoring$model_scores_plot
+# analysis <- readRDS("../data/analysis/analysis.rds")
+# all_scores <- readRDS("../data/analysis/all_scores.rds")
+# aggregate_scores <- readRDS("../data/analysis/aggregate_scores.rds")
+# plot_scoring <- readRDS("../data/analysis/plot_scoring.rds")
+# plot_predictions <- readRDS("../data/analysis/plot_predictions.rds")
+# predicted_incidences <- readRDS("../data/analysis/predicted_incidences.rds")
 
 ```
 
 ```{r do-analysis, include=FALSE}
 
-models <- c("local", "semilocal", "local_student", "ar1", "ar2")
-data <- list(inputdata = inputdata, 
-			 last_date = max(inputdata$date),
-             models = models,
-             incidences = incidences,
-             n_pred = 7,
-             start_period = 4)
+# models <- c("local", "semilocal", "local_student", "ar1", "ar2")
+# data <- list(inputdata = inputdata, 
+# 			 last_date = max(inputdata$date),
+#              models = models,
+#              incidences = incidences,
+#              n_pred = 7,
+#              start_period = 4)
 
 # analysis <- full_analysis(data)
 # full_predictive_samples <- analysis$full_predictive_samples
@@ -128,18 +120,12 @@ Forecast the time-varying $R_t$ estimates into the future to get a sense of the 
 some abstract.
 
 ## Key Results {.tabset}
-### graph
-Here will be a graph with predictions made by the best model
-```{r Summary-results-graph}
-# patchwork::wrap_plots(analysis$predictions_best, ncol = 2)
+### Forecasts for regions with highest forecast
+plot with incidences on top
+Rt estimeates below for those regions
 
-```
-
-### table
-Here will be a table that summarises predictions made by the best model
-```{r Summary-results}
-# knitr::kable(summary_prediction_result[,-1])
-```
+### Forecast summary table
+1, 3, 7, 14 day ahead CI
 
 ## Methods  {.tabset}
 
@@ -215,55 +201,36 @@ yet to be implemented
 
 
 #### **Scoring**
-
-
 ##### PIT and calibration
-
 ##### bias
-
 ##### sharpness
-
 ##### CRPS
-
 ##### DSS
 
 
 # Scoring {.tabset}
 
-## Performance of 7-days-ahead-forecasts
+## Across all countries {.tabset}
+### Graph
+<!-- Maybe split plots up and make a tab for every metric.   -->
+<!-- For actual report only use the forecast window that we actually care about, 
+i.e. use the following structure: -->
 
-## Performance across different forecasting horizons {.tabset}
+<!-- ## Performance of 7-days-ahead-forecasts -->
+<!-- ## Performance across different forecasting horizons {.tabset} -->
+<!-- ### Calibration / PIT -->
+<!-- ### Bias -->
+<!-- ### Sharpness -->
+<!-- ### CRPS  -->
 
-### Calibration / PIT
+![](../results/plots/metrics_by_days_ahead_across_regions.png)
 
-### Bias
+![](../results/plots/metrics_by_days_ahead_across_regions_grouped.png)
 
-### Sharpness
+### Scoring table
 
-### CRPS 
-
-```{r Scoring-boxplot-different-horizons}
-
-# plot_scoring$score_days_ahead
-
-## maybe split in boxplot and lineplot
-
-```
-
-### DSS
-
-
-## Scoring Tables {.tabset}
-
-### Aggregated scores
-
-
-
-### All scores
-```{r Scoring-total-scores}
-knitr::kable(analysis$scoring$across_country_scores)
-```
-
+## By country
+same es before
 
 
 
