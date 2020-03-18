@@ -21,15 +21,6 @@ future::plan("multiprocess", workers = future::availableCores() / 2)
 #
 # ======================================================== #
 
-analysis <- readRDS("data/analysis/analysis.rds")
-all_scores <- readRDS("data/analysis/all_scores.rds")
-full_predictive_samples <- analysis$full_predictive_samples
-
-aggregate_scores <- readRDS("../data/analysis/aggregate_scores.rds")
-plot_scoring <- readRDS("../data/analysis/plot_scoring.rds")
-plot_predictions <- readRDS("../data/analysis/plot_predictions.rds")
-predicted_incidences <- readRDS("../data/analysis/predicted_incidences.rds")
-
 models <- c("local", "semilocal", "local_student", "ar1", "ar2")
 inputdata <- load_all_timeseries()
 incidences <- load_all_timeseries(ts_type = "incidences")
@@ -40,6 +31,23 @@ data <- list(inputdata = inputdata,
              incidences = incidences,
              n_pred = 14,
              start_period = 4)
+
+analysis <- readRDS("data/analysis/analysis.rds")
+all_scores <- readRDS("data/analysis/all_scores.rds")
+full_predictive_samples <- analysis$full_predictive_samples
+region = "italy"
+model = "semilocal"
+aggregate_scores <- readRDS("data/analysis/aggregate_scores.rds")
+plot_scoring <- readRDS("data/analysis/plot_scoring.rds")
+plot_predictions <- readRDS("data/analysis/plot_predictions.rds")
+predicted_incidences <- readRDS("data/analysis/predicted_incidences.rds")
+
+
+
+
+
+# ====== run analysis again ====== #
+
 
 analysis <- full_analysis(data)
 saveRDS(analysis, file = "data/analysis/analysis.rds")
@@ -87,6 +95,20 @@ saveRDS(plot_predictions, file = "data/analysis/plot_predictions.rds")
 
 
 
+
+# 						v <- sapply(seq_along(dates), 
+# 								FUN = function (i) {
+# 									infectiousness_from_true_data(1, incidences, data, region, dates[i])
+# 								})
+						
+# rowMeans((full_predictive_samples[full_predictive_samples$region == region & full_predictive_samples$days_ahead ==1, 7:700]))
+
+# any(is.na(pred_inc))
+# any(is.na(pmax(curr_r_pred[, select_cols] * infectiousness, 0)))
+
+# which(is.na(pred_inc), arr.ind = T)
+# dim(pred_inc)
+# pred_inc
 
 
 

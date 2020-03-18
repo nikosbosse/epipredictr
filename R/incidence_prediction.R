@@ -71,15 +71,8 @@ predict_incidences_one_region <- function(full_predictive_samples, region) {
 						select_cols <- grepl("sample", colnames(curr_r_pred))	
 
 						## infectiousness from observed data
-						inf_data <- infectiousness_from_true_data(days_ahead = days_ahead, data,
-						region, date_of_prediction = dates[i])
+						inf_data <- infectiousness_from_true_data(days_ahead = days_ahead, incidences, data, region, date_of_prediction = dates[i])
 					
-						v <- sapply(seq_along(dates), 
-								FUN = function (i) {
-									infectiousness_from_true_data(1, data, region, dates[i])
-								})
-
-
 
 						## infectiousness from predicted data
 						last_date_of_observed_data <- as.Date(dates[i]) - days_ahead
@@ -104,8 +97,9 @@ predict_incidences_one_region <- function(full_predictive_samples, region) {
 							infectiousness <- Reduce("+", inf) + inf_data
 						}
 
-						pred_inc <- cbind(curr_r_pred[, !select_cols], 
-										  pmax(curr_r_pred[, select_cols] * infectiousness, 0))
+						tmp <- curr_r_pred[, select_cols] * infectiousness
+						tmp[tmp < 0] <- 0
+						pred_inc <- cbind(curr_r_pred[, !select_cols], tmp)
 
 						return(pred_inc)
 					})
@@ -117,7 +111,7 @@ predict_incidences_one_region <- function(full_predictive_samples, region) {
 
 }
 
-infectiousness_from_true_data <- function(days_ahead, 
+infectiousness_from_true_data <- function(days_ahead, incidences,
 										  data, region, date_of_prediction,
 										  mean_si = NULL, sd_si = NULL) {
 
