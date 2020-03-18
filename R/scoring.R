@@ -46,6 +46,7 @@ scoring <- function(data, full_predictive_samples, incidences = NULL, scoringtyp
 
 		dss <- scoringRules::dss_sample(y = df$y, dat = as.matrix(pred))
 		crps <- scoringRules::crps_sample(y = df$y, dat = as.matrix(pred))
+		logS <- scoringRules::logs_sample(y = df$y, dat = as.matrix(pred))
 		pit <- pit_cont(y = df$y, as.matrix(pred))
 		sharpness <- apply(pred, MARGIN = 1, mad)
 		bias <- 1 - pit
@@ -56,6 +57,7 @@ scoring <- function(data, full_predictive_samples, incidences = NULL, scoringtyp
 				   region = region,
 				   days_ahead = df$days_ahead, 
 				   crps = crps, 
+				   logS = logS,
 				   dss = dss, 
 				   pit = pit, 
 				   sharpness = sharpness,

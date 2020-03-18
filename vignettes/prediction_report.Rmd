@@ -64,6 +64,9 @@ all_scores <- readRDS("../data/analysis/all_scores.rds")
 aggregate_scores <- readRDS("../data/analysis/aggregate_scores.rds")
 plot_scoring <- readRDS("../data/analysis/plot_scoring.rds")
 plot_predictions <- readRDS("../data/analysis/plot_predictions.rds")
+predicted_incidences <- readRDS("../data/analysis/predicted_incidences.rds")
+
+
 plot_predictions$all_plot_pred_vs_true$pred_vs_trueaustralia
 plot_predictions$all_plot_pred_vs_true$pred_vs_trueitaly$local_student
 

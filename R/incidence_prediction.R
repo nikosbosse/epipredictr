@@ -19,15 +19,17 @@ predict_incidences <- function (data, full_predictive_samples) {
 
 
 
-	regions <- unique(data$inputdata$region)
+	regions <- as.character(unique(data$inputdata$region))
 
 	inc_pred <- furrr::future_map(seq_along(regions), 
 					   function(i) {
 					   		cat("predict incidences ", 
-							as.character(i), " (", regions[i],
-							") ",  
-							"of ", as.character(length(regions)), 
-							"\n", sep = "")
+								as.character(i), 
+								" (", 
+								regions[i],
+								") ",  
+								"of ", as.character(length(regions)), 
+								"\n", sep = "")
 					   		predict_incidences_one_region(full_predictive_samples, regions[i])
 					   }, .progress = T)
 	return(do.call(rbind, inc_pred))
@@ -36,12 +38,24 @@ predict_incidences <- function (data, full_predictive_samples) {
 
 
 
+
+
+
+# d <- predict_incidences_one_region(full_predictive_samples, "south-korea")
+
+# d[, 5:8]
+
+# d2 <- d[d$days_ahead == 10, ]
+
+# ggplot(d2, aes(x = date, y = .data[['sample 2']], group = model, color = model)) + geom_line() + 
+# theme(text = element_text(family = 'Sans Serif'))
+
+
 predict_incidences_one_region <- function(full_predictive_samples, region) {
 
-	region = "austria"
 	pred <- full_predictive_samples[full_predictive_samples$region == region, ]
 	max_days_ahead <- max(full_predictive_samples$days_ahead)
-	predicted_incidences <- list()
+	pr_incidences <- list()
 	
 	for (days_ahead in 1:max_days_ahead) {
 		pred_x_ahead <- pred[pred$days_ahead == days_ahead, ]
@@ -57,9 +71,16 @@ predict_incidences_one_region <- function(full_predictive_samples, region) {
 						select_cols <- grepl("sample", colnames(curr_r_pred))	
 
 						## infectiousness from observed data
-						inf_data <- infectiousness_from_true_data(days_ahead = days_ahead, data, 
+						inf_data <- infectiousness_from_true_data(days_ahead = days_ahead, data,
 						region, date_of_prediction = dates[i])
-						
+					
+						v <- sapply(seq_along(dates), 
+								FUN = function (i) {
+									infectiousness_from_true_data(1, data, region, dates[i])
+								})
+
+
+
 						## infectiousness from predicted data
 						last_date_of_observed_data <- as.Date(dates[i]) - days_ahead
 						prev_pred_dates <- last_date_of_observed_data + 1:days_ahead
@@ -75,7 +96,7 @@ predict_incidences_one_region <- function(full_predictive_samples, region) {
 								diff_to_curr <- as.numeric(as.Date(dates[i]) - curr_prev_date)
 								predictions_to_select <- days_ahead - diff_to_curr
 
-								prev_pred_inc <- predicted_incidences[[predictions_to_select]]
+								prev_pred_inc <- pr_incidences[[predictions_to_select]]
 								prev_pred_inc <- prev_pred_inc[prev_pred_inc$date == curr_prev_date, ]
 
 								inf[[predictions_to_select]] <- prev_pred_inc[, select_cols] * weight_case_x_days_ago(diff_to_curr)
@@ -84,19 +105,17 @@ predict_incidences_one_region <- function(full_predictive_samples, region) {
 						}
 
 						pred_inc <- cbind(curr_r_pred[, !select_cols], 
-										  curr_r_pred[, select_cols] * infectiousness)
+										  pmax(curr_r_pred[, select_cols] * infectiousness, 0))
+
 						return(pred_inc)
 					})
 
-		predicted_incidences[[days_ahead]] <- do.call(rbind, inc)
+		pr_incidences[[days_ahead]] <- do.call(rbind, inc)
 	}
 
-	return(do.call(rbind, predicted_incidences))
+	return(do.call(rbind, pr_incidences))
 
 }
-
-b <- do.call(rbind, predicted_incidences)
-
 
 infectiousness_from_true_data <- function(days_ahead, 
 										  data, region, date_of_prediction,
@@ -111,14 +130,9 @@ infectiousness_from_true_data <- function(days_ahead,
 		num_obs <- length(y)
 		dates <- incidences$date[incidences$region == region]
 
-
-
-
 		w <- sapply(num_obs:1, weight_case_x_days_ago)
 		return (sum(w * y))
 }
-
-
 
 
 weight_case_x_days_ago <- function(num_days_ago, 
@@ -137,8 +151,8 @@ weight_case_x_days_ago <- function(num_days_ago,
 	mu_log <- log(mean_si) - 1/2 * log((sd_si / mean_si)^2 + 1)
 	sd_log <- sqrt(log((sd_si/mean_si)^2 + 1) )
 
-	return(plnorm(num_days_ago + 0.5, alpha_gamma, beta_gamma) -
-      	   plnorm(num_days_ago - 0.5, alpha_gamma, beta_gamma))
+	return(plnorm(num_days_ago + 0.5, mu_log, sd_log) -
+      	   plnorm(num_days_ago - 0.5, mu_log, sd_log))
 
 }
 

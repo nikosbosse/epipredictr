@@ -21,6 +21,14 @@ future::plan("multiprocess", workers = future::availableCores() / 2)
 #
 # ======================================================== #
 
+analysis <- readRDS("data/analysis/analysis.rds")
+all_scores <- readRDS("data/analysis/all_scores.rds")
+full_predictive_samples <- analysis$full_predictive_samples
+
+aggregate_scores <- readRDS("../data/analysis/aggregate_scores.rds")
+plot_scoring <- readRDS("../data/analysis/plot_scoring.rds")
+plot_predictions <- readRDS("../data/analysis/plot_predictions.rds")
+predicted_incidences <- readRDS("../data/analysis/predicted_incidences.rds")
 
 models <- c("local", "semilocal", "local_student", "ar1", "ar2")
 inputdata <- load_all_timeseries()
@@ -36,7 +44,6 @@ data <- list(inputdata = inputdata,
 analysis <- full_analysis(data)
 saveRDS(analysis, file = "data/analysis/analysis.rds")
 
-full_predictive_samples <- analysis$full_predictive_samples
 # 
 all_scores <- scoring(data, analysis$full_predictive_samples)
 saveRDS(all_scores, file = "data/analysis/all_scores.rds")
@@ -47,17 +54,17 @@ saveRDS(aggregate_scores, file = "data/analysis/aggregate_scores.rds")
 plot_scoring <- plot_scoring(data, aggregate_scores, all_scores)
 saveRDS(plot_scoring, file = "data/analysis/plot_scoring.rds")
 
-plot_predictions <- plot_predictions(data, full_predictive_samples, best_model = "semilocal")
+plot_predictions <- plot_predictions(data, 
+									 analysis$full_predictive_samples, 
+									 best_model = "semilocal")
 saveRDS(plot_predictions, file = "data/analysis/plot_predictions.rds")
 
 
-
-
-
 ## do everything for incidences as well
-predicted_incidences <- predict_incidences(data, full_predictive_samples)
-
+predicted_incidences <- predict_incidences(data, 
+										   analysis$full_predictive_samples)
 saveRDS(predicted_incidences, file = "data/analysis/predicted_incidences.rds")
+
 
 all_scored_incidences <- scoring(data, analysis$full_predictive_samples, 
 								 incidences = incidences, scoringtype = "Inc", 
@@ -68,8 +75,8 @@ aggregated_incidence_scores <- aggregate_scores(all_scored_incidences)
 saveRDS(aggregated_incidence_scores, file = "data/analysis/aggregated_incidence_scores.rds")
 
 plot_predictions_incidences <- plot_predictions(data, full_predictive_samples, 
-									 best_model = "semilocal", incidences, 
-									 type = "inc")
+									 best_model = "semilocal", incidences = incidences, 
+									 type = "inc", predicted_incidences = predicted_incidences)
 saveRDS(plot_predictions, file = "data/analysis/plot_predictions.rds")
 
 
